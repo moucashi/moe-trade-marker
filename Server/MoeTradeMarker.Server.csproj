@@ -6,8 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputType>Library</OutputType>
-    <Version>0.1.0</Version>
-    <OutputPath>..\dist\SPT\user\mods\MoeTradeMarker\</OutputPath>
+    <Version>0.1.6</Version>
+    <OutputPath>..\dist\SPT\user\mods\Moe-TradeMarker\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>

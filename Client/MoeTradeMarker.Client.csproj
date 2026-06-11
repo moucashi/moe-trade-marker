@@ -6,23 +6,28 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputType>Library</OutputType>
-    <Version>0.1.0</Version>
-    <OutputPath>..\dist\BepInEx\plugins\MoeTradeMarker\</OutputPath>
+    <Version>0.1.6</Version>
+    <OutputPath>..\dist\BepInEx\plugins\Moe-TradeMarker\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     <SPTManagedPath Condition="'$(SPTPath)' != ''">$(SPTPath)\EscapeFromTarkov_Data\Managed</SPTManagedPath>
     <SPTBepInExCorePath Condition="'$(SPTPath)' != ''">$(SPTPath)\BepInEx\core</SPTBepInExCorePath>
     <UseSptClientReferences Condition="Exists('$(SPTManagedPath)\Assembly-CSharp.dll') and Exists('$(SPTBepInExCorePath)\BepInEx.dll')">true</UseSptClientReferences>
-    <DefineConstants Condition="'$(UseSptClientReferences)' == 'true'">$(DefineConstants);SPT_CLIENT</DefineConstants>
+    <DefineConstants>$(DefineConstants);SPT_CLIENT</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Shared\MoeTradeMarker.Shared.csproj" />
+    <Compile Include="..\Shared\MarkerPosition.cs" Link="Shared\MarkerPosition.cs" />
+    <Compile Include="..\Shared\TradeMarkerConstants.cs" Link="Shared\TradeMarkerConstants.cs" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="BepInEx.Core" Version="5.4.21" Condition="'$(UseSptClientReferences)' != 'true'" PrivateAssets="all" IncludeAssets="compile; build; analyzers" />
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" Condition="'$(UseSptClientReferences)' != 'true'" PrivateAssets="all" IncludeAssets="compile; build; analyzers" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="Unity3D.UnityEngine" Version="2018.3.5.1" Condition="'$(UseSptClientReferences)' != 'true'" PrivateAssets="all" IncludeAssets="compile; build; analyzers" />
+    <PackageReference Include="Unity3D.UnityEngine.UI" Version="2018.3.5.1" Condition="'$(UseSptClientReferences)' != 'true'" PrivateAssets="all" IncludeAssets="compile; build; analyzers" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(UseSptClientReferences)' == 'true'">
@@ -42,11 +47,7 @@
       <HintPath>$(SPTManagedPath)\Comfort.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="Newtonsoft.Json" Condition="Exists('$(SPTManagedPath)\Newtonsoft.Json.dll')">
-      <HintPath>$(SPTManagedPath)\Newtonsoft.Json.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="UnityEngine">
+    <Reference Include="UnityEngine" Condition="!Exists('$(SPTManagedPath)\UnityEngine.CoreModule.dll')">
       <HintPath>$(SPTManagedPath)\UnityEngine.dll</HintPath>
       <Private>false</Private>
     </Reference>
@@ -54,7 +55,7 @@
       <HintPath>$(SPTManagedPath)\UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="UnityEngine.EventSystemsModule">
+    <Reference Include="UnityEngine.EventSystemsModule" Condition="Exists('$(SPTManagedPath)\UnityEngine.EventSystemsModule.dll')">
       <HintPath>$(SPTManagedPath)\UnityEngine.EventSystemsModule.dll</HintPath>
       <Private>false</Private>
     </Reference>

@@ -1,5 +1,5 @@
 #if SPT_CLIENT
-using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using MoeTradeMarker.Shared;
@@ -11,16 +11,19 @@ namespace MoeTradeMarker.Client;
 
 internal static class TradeMarkerOverlay
 {
+    private static readonly List<WeakReference<Image>> ActiveMarkers = [];
     private static Sprite? iconSprite;
 
-    public static void Show(Image iconImage, string overlayName, string traderName, object? tooltip, MarkerPosition position, Color color)
+    public static void ShowOnItemView(Component itemView, string overlayName, string traderName, object? tooltip, MarkerPosition position, Color color)
     {
-        var overlay = GetOrCreateOverlay(iconImage, overlayName);
+        var overlay = GetOrCreateOverlay(itemView, overlayName);
         overlay.color = color;
-        overlay.sprite = iconSprite ??= CreateMarkerSprite();
+        iconSprite ??= CreateMarkerSprite();
+        overlay.sprite = iconSprite;
         overlay.raycastTarget = true;
 
         Position(overlay.rectTransform, position);
+        TrackMarker(overlay);
 
         var trigger = overlay.GetComponent<TradeMarkerTooltipTrigger>()
             ?? overlay.gameObject.AddComponent<TradeMarkerTooltipTrigger>();
@@ -28,6 +31,30 @@ internal static class TradeMarkerOverlay
         trigger.Text = $"商人标记：{traderName}";
 
         overlay.gameObject.SetActive(true);
+    }
+
+    public static void HideFromItemView(object itemView, string overlayName)
+    {
+        var child = (itemView as Component)?.transform.Find(overlayName);
+        if (child is not null)
+        {
+            child.gameObject.SetActive(false);
+        }
+    }
+
+    public static void ApplyCurrentConfigToVisibleMarkers()
+    {
+        ActiveMarkers.RemoveAll(reference => !reference.TryGetTarget(out var image) || image is null);
+        foreach (var reference in ActiveMarkers)
+        {
+            if (!reference.TryGetTarget(out var marker) || marker is null)
+            {
+                continue;
+            }
+
+            marker.color = TradeMarkerClientConfig.MarkerColor;
+            Position(marker.rectTransform, TradeMarkerClientConfig.MarkerPosition);
+        }
     }
 
     public static void Hide(object instance, string overlayName)
@@ -57,7 +84,7 @@ internal static class TradeMarkerOverlay
 
     public static object? FindTooltip(object instance, object[] args)
     {
-        var fromArgs = args.FirstOrDefault(arg => arg?.GetType().Name.Contains("Tooltip", StringComparison.OrdinalIgnoreCase) == true);
+        var fromArgs = args.FirstOrDefault(arg => Contains(arg?.GetType().Name, "Tooltip", StringComparison.OrdinalIgnoreCase));
         if (fromArgs is not null)
         {
             return fromArgs;
@@ -66,7 +93,7 @@ internal static class TradeMarkerOverlay
         var type = instance.GetType();
         foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
         {
-            if (field.FieldType.Name.Contains("Tooltip", StringComparison.OrdinalIgnoreCase))
+            if (Contains(field.FieldType.Name, "Tooltip", StringComparison.OrdinalIgnoreCase))
             {
                 return field.GetValue(instance);
             }
@@ -75,17 +102,28 @@ internal static class TradeMarkerOverlay
         return null;
     }
 
-    private static Image GetOrCreateOverlay(Image iconImage, string overlayName)
+    private static Image GetOrCreateOverlay(Component parent, string overlayName)
     {
-        var existing = iconImage.transform.Find(overlayName)?.GetComponent<Image>();
+        var existing = parent.transform.Find(overlayName)?.GetComponent<Image>();
         if (existing is not null)
         {
             return existing;
         }
 
         var gameObject = new GameObject(overlayName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        gameObject.transform.SetParent(iconImage.transform, worldPositionStays: false);
+        gameObject.transform.SetParent(parent.transform, worldPositionStays: false);
+        gameObject.transform.SetAsLastSibling();
         return gameObject.GetComponent<Image>();
+    }
+
+    private static void TrackMarker(Image marker)
+    {
+        if (ActiveMarkers.Any(reference => reference.TryGetTarget(out var image) && image == marker))
+        {
+            return;
+        }
+
+        ActiveMarkers.Add(new WeakReference<Image>(marker));
     }
 
     private static void Position(RectTransform rectTransform, MarkerPosition position)
@@ -95,6 +133,7 @@ internal static class TradeMarkerOverlay
 
         rectTransform.sizeDelta = new Vector2(size, size);
         rectTransform.localScale = Vector3.one;
+        rectTransform.localRotation = Quaternion.identity;
 
         switch (position)
         {
@@ -128,8 +167,10 @@ internal static class TradeMarkerOverlay
         {
             for (var x = 0; x < size; x++)
             {
-                var inside = x >= 4 && x <= 25 && y >= 6 && y <= 27 && x + y >= 14;
-                var hole = (x - 10) * (x - 10) + (y - 22) * (y - 22) <= 9;
+                var body = x >= 5 && x <= 26 && y >= 7 && y <= 24;
+                var point = x >= 18 && x <= 29 && y >= 12 && y <= 19 && x - y <= 12 && y - x <= 1;
+                var hole = (x - 10) * (x - 10) + (y - 20) * (y - 20) <= 6;
+                var inside = body || point;
                 texture.SetPixel(x, y, inside && !hole ? solid : transparent);
             }
         }
@@ -141,6 +182,11 @@ internal static class TradeMarkerOverlay
     private static FieldInfo? AccessField(Type type, string fieldName)
     {
         return type.GetField(fieldName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+    }
+
+    private static bool Contains(string? value, string part, StringComparison comparison)
+    {
+        return value?.IndexOf(part, comparison) >= 0;
     }
 }
 

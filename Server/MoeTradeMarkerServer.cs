@@ -18,7 +18,7 @@ public class MoeTradeMarkerServer(
         staticRouter.Enable();
         new TradeHelperBuyItemPatch().Enable();
         new RagfairAddPlayerOfferPatch().Enable();
-        logger.Success("MoeTradeMarker 服务端已加载。");
+        logger.Success("Moe-TradeMarker 服务端已加载。");
 
         return Task.CompletedTask;
     }

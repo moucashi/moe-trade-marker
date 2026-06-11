@@ -2,7 +2,7 @@ namespace MoeTradeMarker.Shared;
 
 public static class TradeMarkerConstants
 {
-    public const string ModName = "MoeTradeMarker";
+    public const string ModName = "Moe-TradeMarker";
     public const string ClientGuid = "moe.trade.marker.client";
     public const string ServerGuid = "moe.trade.marker.server";
     public const string UpdMarkerProperty = "tradeMarker";

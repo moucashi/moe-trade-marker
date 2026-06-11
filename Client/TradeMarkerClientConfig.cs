@@ -12,22 +12,13 @@ internal static class TradeMarkerClientConfig
 
     private static ConfigEntry<bool>? showTraderMarker;
     private static ConfigEntry<MarkerPosition>? markerPosition;
-    private static ConfigEntry<string>? markerColor;
+    private static ConfigEntry<Color>? markerColor;
 
     public static bool ShowTraderMarker => showTraderMarker?.Value ?? true;
 
-    public static MarkerPosition MarkerPosition => markerPosition?.Value ?? MarkerPosition.LeftBottom;
+    public static MarkerPosition MarkerPosition => markerPosition?.Value ?? MarkerPosition.LeftTop;
 
-    public static Color MarkerColor
-    {
-        get
-        {
-            var value = markerColor?.Value;
-            return ColorUtility.TryParseHtmlString(value, out var color)
-                ? color
-                : new Color(0.46f, 0.96f, 1f, 0.95f);
-        }
-    }
+    public static Color MarkerColor => markerColor?.Value ?? new Color(0.46f, 0.96f, 1f, 0.95f);
 
     public static void Bind(ConfigFile config)
     {
@@ -40,14 +31,16 @@ internal static class TradeMarkerClientConfig
         markerPosition = config.Bind(
             DisplaySection,
             "MarkerPosition",
-            MarkerPosition.LeftBottom,
+            MarkerPosition.LeftTop,
             "商人标记角标位置，可选 LeftTop、RightTop、LeftBottom、RightBottom。");
+        markerPosition.SettingChanged += (_, _) => TradeMarkerOverlay.ApplyCurrentConfigToVisibleMarkers();
 
         markerColor = config.Bind(
             DisplaySection,
             "MarkerColor",
-            "#75F4FFFF",
-            "商人标记图标颜色，支持 HTML 十六进制颜色，例如 #75F4FFFF。");
+            new Color(0.46f, 0.96f, 1f, 0.95f),
+            "商人标记图标颜色。");
+        markerColor.SettingChanged += (_, _) => TradeMarkerOverlay.ApplyCurrentConfigToVisibleMarkers();
     }
 }
 #endif
