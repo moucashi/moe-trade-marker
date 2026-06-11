@@ -14,6 +14,7 @@ internal static class TradeMarkerDataLoader
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(5);
     private static readonly object SyncRoot = new();
     private static DateTime lastRefreshUtc = DateTime.MinValue;
+    private static string? lastLoggedLanguageCode;
     private static Dictionary<string, string> traderNames = new(StringComparer.OrdinalIgnoreCase);
     private static Dictionary<string, string> itemMarkers = new(StringComparer.OrdinalIgnoreCase);
 
@@ -35,7 +36,7 @@ internal static class TradeMarkerDataLoader
         var found = TryGetTraderNameFromCache(itemId, out traderName);
         if (!found)
         {
-            Plugin.Log.LogDebug($"Moe-TradeMarker 未找到物品 {itemId} 的商人标记。");
+            Plugin.Log.LogDebug(TradeMarkerLocalization.Format(TradeMarkerText.ClientItemMarkerMissing, itemId));
         }
 
         return found;
@@ -69,6 +70,8 @@ internal static class TradeMarkerDataLoader
         lastRefreshUtc = now;
         try
         {
+            TradeMarkerLocalization.Refresh();
+            PostLanguage();
             var loadedTraderNames = GetDictionary(TradeMarkerConstants.TraderInfoRoute);
             var loadedItemMarkers = GetDictionary(TradeMarkerConstants.ItemMarkerRoute);
 
@@ -87,7 +90,20 @@ internal static class TradeMarkerDataLoader
         }
         catch (Exception exception)
         {
-            Plugin.Log.LogDebug($"Moe-TradeMarker 客户端标记数据刷新失败：{exception.Message}");
+            Plugin.Log.LogDebug(TradeMarkerLocalization.Format(TradeMarkerText.ClientMarkerRefreshFailed, exception.Message));
+        }
+    }
+
+    public static void SyncLanguage()
+    {
+        try
+        {
+            TradeMarkerLocalization.Refresh();
+            PostLanguage();
+        }
+        catch (Exception exception)
+        {
+            Plugin.Log.LogDebug(TradeMarkerLocalization.Format(TradeMarkerText.ClientLanguageSyncFailed, exception.Message));
         }
     }
 
@@ -104,16 +120,81 @@ internal static class TradeMarkerDataLoader
 
     private static string? GetJson(string route)
     {
-        var requestHandler = Type.GetType("SPT.Common.Http.RequestHandler, spt-common")
-            ?? AppDomain.CurrentDomain.GetAssemblies()
-                .Select(assembly => assembly.GetType("SPT.Common.Http.RequestHandler"))
-                .FirstOrDefault(type => type is not null);
-
+        var requestHandler = GetRequestHandlerType();
         var method = requestHandler?
             .GetMethods(BindingFlags.Public | BindingFlags.Static)
             .FirstOrDefault(info => info.Name == "GetJson" && info.GetParameters().Length == 1);
 
         return method?.Invoke(null, new object[] { route })?.ToString();
+    }
+
+    private static void PostLanguage()
+    {
+        try
+        {
+            var requestHandler = GetRequestHandlerType();
+            var method = FindPostJsonMethod(requestHandler);
+
+            if (method is null)
+            {
+                return;
+            }
+
+            var languageCode = TradeMarkerLocalization.LanguageCode;
+            var payload = $"{{\"language\":\"{languageCode}\"}}";
+            var parameters = method.GetParameters();
+            var args = new object?[parameters.Length];
+            args[0] = TradeMarkerConstants.LanguageRoute;
+            args[1] = payload;
+
+            for (var index = 2; index < parameters.Length; index++)
+            {
+                args[index] = parameters[index].HasDefaultValue ? parameters[index].DefaultValue : null;
+            }
+
+            method.Invoke(null, args);
+            LogLanguageSync(languageCode);
+        }
+        catch
+        {
+            // Language sync is best effort; marker data loading must keep working without it.
+        }
+    }
+
+    private static void LogLanguageSync(string languageCode)
+    {
+        if (string.Equals(lastLoggedLanguageCode, languageCode, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        lastLoggedLanguageCode = languageCode;
+        Plugin.Log.LogInfo(TradeMarkerLocalization.Format(TradeMarkerText.ClientLanguageSynced, languageCode));
+    }
+
+    private static Type? GetRequestHandlerType()
+    {
+        return Type.GetType("SPT.Common.Http.RequestHandler, spt-common")
+            ?? AppDomain.CurrentDomain.GetAssemblies()
+                .Select(assembly => assembly.GetType("SPT.Common.Http.RequestHandler"))
+                .FirstOrDefault(type => type is not null);
+    }
+
+    private static MethodInfo? FindPostJsonMethod(Type? requestHandler)
+    {
+        if (requestHandler is null)
+        {
+            return null;
+        }
+
+        var candidates = requestHandler.GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Where(info => info.GetParameters().Length >= 2
+                && info.GetParameters()[0].ParameterType == typeof(string)
+                && info.GetParameters()[1].ParameterType == typeof(string));
+
+        return candidates.FirstOrDefault(info => info.Name == "PostJson")
+            ?? candidates.FirstOrDefault(info => info.Name == "Post")
+            ?? candidates.FirstOrDefault(info => info.Name == "PostJsonAsync");
     }
 
     private static Dictionary<string, string> ParseStringDictionary(string json)

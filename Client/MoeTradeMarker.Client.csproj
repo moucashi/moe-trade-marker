@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputType>Library</OutputType>
-    <Version>0.1.6</Version>
+    <Version>0.2.2</Version>
     <OutputPath>..\dist\BepInEx\plugins\Moe-TradeMarker\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
@@ -20,6 +20,10 @@
   <ItemGroup>
     <Compile Include="..\Shared\MarkerPosition.cs" Link="Shared\MarkerPosition.cs" />
     <Compile Include="..\Shared\TradeMarkerConstants.cs" Link="Shared\TradeMarkerConstants.cs" />
+    <Compile Include="..\Shared\TradeMarkerLanguage.cs" Link="Shared\TradeMarkerLanguage.cs" />
+    <Compile Include="..\Shared\TradeMarkerLanguageMode.cs" Link="Shared\TradeMarkerLanguageMode.cs" />
+    <Compile Include="..\Shared\TradeMarkerLocalizer.cs" Link="Shared\TradeMarkerLocalizer.cs" />
+    <Compile Include="..\Shared\TradeMarkerText.cs" Link="Shared\TradeMarkerText.cs" />
   </ItemGroup>
 
   <ItemGroup>

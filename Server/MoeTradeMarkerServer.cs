@@ -1,5 +1,6 @@
 using MoeTradeMarker.Server.Patches;
 using MoeTradeMarker.Server.Services;
+using MoeTradeMarker.Shared;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
 using SPTarkov.Server.Core.Models.Utils;
@@ -10,7 +11,8 @@ namespace MoeTradeMarker.Server;
 public class MoeTradeMarkerServer(
     ISptLogger<MoeTradeMarkerServer> logger,
     TradeMarkerConfigService configService,
-    TradeMarkerStaticRouter staticRouter) : IOnLoad
+    TradeMarkerStaticRouter staticRouter,
+    TradeMarkerLanguageService languageService) : IOnLoad
 {
     public Task OnLoad()
     {
@@ -18,7 +20,7 @@ public class MoeTradeMarkerServer(
         staticRouter.Enable();
         new TradeHelperBuyItemPatch().Enable();
         new RagfairAddPlayerOfferPatch().Enable();
-        logger.Success("Moe-TradeMarker 服务端已加载。");
+        logger.Success(languageService.Text(TradeMarkerText.ServerLoaded));
 
         return Task.CompletedTask;
     }

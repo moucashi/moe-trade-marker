@@ -1,34 +1,37 @@
 # Moe-TradeMarker
 
-Moe-TradeMarker 是一个面向 SPT 4.0+ 的组合 MOD，用于标记从 NPC 商人购买的物品，并限制带有商人标记的物品上架跳蚤市场。
+[中文说明](README.zh-CN.md)
 
-## 功能
+Moe-TradeMarker is a combined SPT 4.0+ mod that marks items bought from NPC traders and can prevent marked items from being listed on the flea market.
 
-- 从 NPC 商人购买物品后写入 `upd.tradeMarker.traderId`。
-- 可通过服务端配置全局或按商人关闭购买打标。
-- 带有商人标记的物品默认不能上架跳蚤市场。
-- 可通过服务端配置全局或按商人关闭上架限制。
-- 客户端在物品图标角落显示标记，并在悬浮提示中显示商人名称。
-- 客户端可配置图标位置和颜色，默认显示在右上角。
+## Features
 
-## 构建
+- Adds `upd.tradeMarker.traderId` to items bought from NPC traders.
+- Server config can disable purchase marking globally or per trader.
+- Items with a trader marker cannot be listed on the flea market by default.
+- Server config can disable the flea market restriction globally or per trader.
+- Client plugin shows a marker on item icons and displays the trader name in the marker tooltip.
+- Client config can change marker position and color. The default marker position is top-left.
+- Player-facing text is localized in English and Simplified Chinese. English is the default; Chinese is selected automatically when a Chinese game or system language is detected.
 
-服务端项目依赖 SPTarkov NuGet 包 `4.0.13`。
+## Build
 
-客户端项目默认使用 NuGet 参考程序集构建真实 BepInEx 插件。也可以设置 `SPTPath` 指向 SPT 安装目录，让构建优先引用本地 SPT 客户端程序集：
+The server project depends on SPTarkov NuGet packages `4.0.13`.
+
+The client project builds a real BepInEx plugin with NuGet reference assemblies by default. You can also set `SPTPath` to your SPT installation directory so the build prefers local SPT client assemblies:
 
 ```powershell
 dotnet build .\MoeTradeMarker.sln -p:SPTPath=C:\SPT
 ```
 
-如果 F12 的 `plugin / mod settings` 中没有看到 Moe-TradeMarker，通常表示安装到 BepInEx 的客户端 DLL 不是带有 `[BepInPlugin]` 的真实插件，或 DLL 没有放在 `BepInEx/plugins/Moe-TradeMarker/` 下。
+If Moe-TradeMarker does not appear in the F12 `plugin / mod settings` menu, the installed client DLL is usually not the real `[BepInPlugin]` plugin DLL, or it was not placed under `BepInEx/plugins/Moe-TradeMarker/`.
 
-## 配置
+## Configuration
 
-服务端配置文件位于 `Server/Config/config.json`，构建时会复制到服务端 MOD 输出目录。
+The server config file is `Server/Config/config.json`; it is copied to the server mod output directory during build.
 
-客户端配置通过 BepInEx 配置菜单调整：
+Client settings are available through the BepInEx configuration menu:
 
-- `ShowTraderMarker`: 是否显示商人标记。
-- `MarkerPosition`: `LeftTop`、`RightTop`、`LeftBottom`、`RightBottom`。
-- `MarkerColor`: 图标颜色，默认浅青色。
+- `ShowTraderMarker`: show the trader marker.
+- `MarkerPosition`: `LeftTop`, `RightTop`, `LeftBottom`, `RightBottom`.
+- `MarkerColor`: marker icon color, light cyan by default.

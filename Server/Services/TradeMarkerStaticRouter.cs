@@ -12,12 +12,14 @@ public class TradeMarkerStaticRouter : StaticRouter
 {
     private static JsonUtil? RouterJsonUtil { get; set; }
     private static TradeMarkerService? RouterTradeMarkerService { get; set; }
+    private static TradeMarkerLanguageService? RouterLanguageService { get; set; }
 
-    public TradeMarkerStaticRouter(JsonUtil jsonUtil, TradeMarkerService tradeMarkerService)
+    public TradeMarkerStaticRouter(JsonUtil jsonUtil, TradeMarkerService tradeMarkerService, TradeMarkerLanguageService languageService)
         : base(jsonUtil, GetRoutes())
     {
         RouterJsonUtil = jsonUtil;
         RouterTradeMarkerService = tradeMarkerService;
+        RouterLanguageService = languageService;
     }
 
     public void Enable()
@@ -36,6 +38,10 @@ public class TradeMarkerStaticRouter : StaticRouter
                 TradeMarkerConstants.ItemMarkerRoute,
                 static (url, info, sessionId, output) => HandleItemMarkerRoute(sessionId)
             ),
+            new RouteAction<SetLanguageRequest>(
+                TradeMarkerConstants.LanguageRoute,
+                static (url, info, sessionId, output) => HandleLanguageRoute(info, sessionId)
+            ),
         ];
     }
 
@@ -49,5 +55,11 @@ public class TradeMarkerStaticRouter : StaticRouter
     {
         var markedItems = RouterTradeMarkerService?.GetMarkedItems(sessionId) ?? [];
         return new ValueTask<string>(RouterJsonUtil?.Serialize(markedItems) ?? "{}");
+    }
+
+    private static ValueTask<string> HandleLanguageRoute(SetLanguageRequest request, MongoId sessionId)
+    {
+        RouterLanguageService?.SetSessionLanguage(sessionId, request.GetLanguage());
+        return new ValueTask<string>("{}");
     }
 }

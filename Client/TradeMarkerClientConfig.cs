@@ -7,12 +7,10 @@ namespace MoeTradeMarker.Client;
 
 internal static class TradeMarkerClientConfig
 {
-    private const string GeneralSection = "通用";
-    private const string DisplaySection = "显示";
-
     private static ConfigEntry<bool>? showTraderMarker;
     private static ConfigEntry<MarkerPosition>? markerPosition;
     private static ConfigEntry<Color>? markerColor;
+    private static ConfigEntry<TradeMarkerLanguageMode>? languageMode;
 
     public static bool ShowTraderMarker => showTraderMarker?.Value ?? true;
 
@@ -20,27 +18,36 @@ internal static class TradeMarkerClientConfig
 
     public static Color MarkerColor => markerColor?.Value ?? new Color(0.46f, 0.96f, 1f, 0.95f);
 
+    public static TradeMarkerLanguageMode LanguageMode => languageMode?.Value ?? TradeMarkerLanguageMode.Auto;
+
     public static void Bind(ConfigFile config)
     {
         showTraderMarker = config.Bind(
-            GeneralSection,
+            TradeMarkerLocalization.Text(TradeMarkerText.ConfigGeneralSection),
             "ShowTraderMarker",
             true,
-            "是否在带有商人标记的物品图标上显示角标。");
+            TradeMarkerLocalization.Text(TradeMarkerText.ConfigShowTraderMarkerDescription));
 
         markerPosition = config.Bind(
-            DisplaySection,
+            TradeMarkerLocalization.Text(TradeMarkerText.ConfigDisplaySection),
             "MarkerPosition",
             MarkerPosition.LeftTop,
-            "商人标记角标位置，可选 LeftTop、RightTop、LeftBottom、RightBottom。");
+            TradeMarkerLocalization.Text(TradeMarkerText.ConfigMarkerPositionDescription));
         markerPosition.SettingChanged += (_, _) => TradeMarkerOverlay.ApplyCurrentConfigToVisibleMarkers();
 
         markerColor = config.Bind(
-            DisplaySection,
+            TradeMarkerLocalization.Text(TradeMarkerText.ConfigDisplaySection),
             "MarkerColor",
             new Color(0.46f, 0.96f, 1f, 0.95f),
-            "商人标记图标颜色。");
+            TradeMarkerLocalization.Text(TradeMarkerText.ConfigMarkerColorDescription));
         markerColor.SettingChanged += (_, _) => TradeMarkerOverlay.ApplyCurrentConfigToVisibleMarkers();
+
+        languageMode = config.Bind(
+            TradeMarkerLocalization.Text(TradeMarkerText.ConfigGeneralSection),
+            "LanguageMode",
+            TradeMarkerLanguageMode.Auto,
+            TradeMarkerLocalization.Text(TradeMarkerText.ConfigLanguageModeDescription));
+        languageMode.SettingChanged += (_, _) => TradeMarkerDataLoader.SyncLanguage();
     }
 }
 #endif

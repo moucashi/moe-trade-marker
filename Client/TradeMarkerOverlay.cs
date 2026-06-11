@@ -28,7 +28,7 @@ internal static class TradeMarkerOverlay
         var trigger = overlay.GetComponent<TradeMarkerTooltipTrigger>()
             ?? overlay.gameObject.AddComponent<TradeMarkerTooltipTrigger>();
         trigger.Tooltip = tooltip;
-        trigger.Text = $"商人标记：{traderName}";
+        trigger.Text = TradeMarkerLocalization.Format(TradeMarkerText.TooltipTraderMarker, traderName);
 
         overlay.gameObject.SetActive(true);
     }

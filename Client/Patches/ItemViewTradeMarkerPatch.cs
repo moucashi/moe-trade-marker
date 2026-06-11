@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using HarmonyLib;
+using MoeTradeMarker.Shared;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -19,18 +20,18 @@ internal static class ItemViewTradeMarkerPatch
         var itemViewType = AccessTools.TypeByName("EFT.UI.DragAndDrop.ItemView");
         if (itemViewType is null)
         {
-            Plugin.Log.LogWarning("Moe-TradeMarker 未找到 EFT.UI.DragAndDrop.ItemView，无法安装物品角标补丁。");
+            Plugin.Log.LogWarning(TradeMarkerLocalization.Text(TradeMarkerText.ClientItemViewTypeMissing));
             yield break;
         }
 
         var targetMethod = AccessTools.Method(itemViewType, "SetQuestItemViewPanel", Type.EmptyTypes);
         if (targetMethod is null)
         {
-            Plugin.Log.LogWarning("Moe-TradeMarker 未找到 ItemView.SetQuestItemViewPanel()，无法安装物品角标补丁。");
+            Plugin.Log.LogWarning(TradeMarkerLocalization.Text(TradeMarkerText.ClientSetQuestItemViewPanelMissing));
             yield break;
         }
 
-        Plugin.Log.LogInfo("Moe-TradeMarker 已安装 ItemView.SetQuestItemViewPanel 物品角标补丁。");
+        Plugin.Log.LogInfo(TradeMarkerLocalization.Text(TradeMarkerText.ClientItemViewPatchInstalled));
         yield return targetMethod;
     }
 
@@ -46,7 +47,7 @@ internal static class ItemViewTradeMarkerPatch
         if (item is null)
         {
             TradeMarkerOverlay.HideFromItemView(__instance, OverlayName);
-            Plugin.Log.LogDebug("Moe-TradeMarker 未能从 ItemView 读取物品对象。");
+            Plugin.Log.LogDebug(TradeMarkerLocalization.Text(TradeMarkerText.ClientItemReadFailed));
             return;
         }
 
@@ -60,13 +61,13 @@ internal static class ItemViewTradeMarkerPatch
         var mainImage = GetMainImage(__instance);
         if (mainImage is null)
         {
-            Plugin.Log.LogDebug($"Moe-TradeMarker 未能从 ItemView 读取物品 {itemId} 的 MainImage。");
+            Plugin.Log.LogDebug(TradeMarkerLocalization.Format(TradeMarkerText.ClientMainImageReadFailed, itemId));
             return;
         }
 
         if (__instance is not Component itemViewComponent)
         {
-            Plugin.Log.LogDebug($"Moe-TradeMarker 未能将物品 {itemId} 的 ItemView 转换为 Unity 组件。");
+            Plugin.Log.LogDebug(TradeMarkerLocalization.Format(TradeMarkerText.ClientItemViewComponentReadFailed, itemId));
             return;
         }
 

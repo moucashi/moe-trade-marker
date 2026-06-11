@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Shared\MoeTradeMarker.Shared.csproj" />
     <ProjectReference Include="..\..\Server\MoeTradeMarker.Server.csproj" />
   </ItemGroup>
 </Project>

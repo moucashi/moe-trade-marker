@@ -23,7 +23,8 @@ public class TradeMarkerService(
     DatabaseServer databaseServer,
     EventOutputHolder eventOutputHolder,
     ProfileHelper profileHelper,
-    HttpResponseUtil httpResponseUtil)
+    HttpResponseUtil httpResponseUtil,
+    TradeMarkerLanguageService languageService)
 {
     private static readonly HashSet<string> TraderPurchaseTypes =
     [
@@ -80,7 +81,8 @@ public class TradeMarkerService(
                 }
 
                 var traderName = GetTraderDisplayName(traderId);
-                var message = $"物品带有商人标记（{traderName}），无法上架跳蚤市场。";
+                var language = languageService.GetSessionLanguage(sessionId, offerRequest, pmcData);
+                var message = languageService.Format(TradeMarkerText.RagfairMarkedItemBlocked, language, traderName);
                 response = httpResponseUtil.AppendErrorToOutput(response, message);
                 return true;
             }

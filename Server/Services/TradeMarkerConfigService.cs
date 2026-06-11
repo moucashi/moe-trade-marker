@@ -1,4 +1,5 @@
 using System.Reflection;
+using MoeTradeMarker.Shared;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Helpers;
 using SPTarkov.Server.Core.Models.Utils;
@@ -6,7 +7,10 @@ using SPTarkov.Server.Core.Models.Utils;
 namespace MoeTradeMarker.Server.Services;
 
 [Injectable(InjectionType = InjectionType.Singleton)]
-public class TradeMarkerConfigService(ISptLogger<TradeMarkerConfigService> logger, ModHelper modHelper)
+public class TradeMarkerConfigService(
+    ISptLogger<TradeMarkerConfigService> logger,
+    ModHelper modHelper,
+    TradeMarkerLanguageService languageService)
 {
     public MoeTradeMarkerConfig Config { get; private set; } = new();
 
@@ -16,12 +20,12 @@ public class TradeMarkerConfigService(ISptLogger<TradeMarkerConfigService> logge
         {
             var modPath = modHelper.GetAbsolutePathToModFolder(Assembly.GetExecutingAssembly());
             Config = modHelper.GetJsonDataFromFile<MoeTradeMarkerConfig>(modPath, "config.json") ?? new MoeTradeMarkerConfig();
-            logger.Success("Moe-TradeMarker 配置已加载。");
+            logger.Success(languageService.Text(TradeMarkerText.ServerConfigLoaded));
         }
         catch (Exception exception)
         {
             Config = new MoeTradeMarkerConfig();
-            logger.Warning($"Moe-TradeMarker 配置读取失败，已使用默认配置：{exception.Message}");
+            logger.Warning(languageService.FormatServer(TradeMarkerText.ServerConfigLoadFailed, exception.Message));
         }
     }
 

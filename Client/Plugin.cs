@@ -7,7 +7,7 @@ using MoeTradeMarker.Shared;
 
 namespace MoeTradeMarker.Client;
 
-[BepInPlugin(TradeMarkerConstants.ClientGuid, TradeMarkerConstants.ModName, "0.1.6")]
+[BepInPlugin(TradeMarkerConstants.ClientGuid, TradeMarkerConstants.ModName, "0.2.2")]
 public sealed class Plugin : BaseUnityPlugin
 {
     private Harmony? harmony;
@@ -17,7 +17,9 @@ public sealed class Plugin : BaseUnityPlugin
     private void Awake()
     {
         Log = Logger;
+        TradeMarkerLocalization.Initialize();
         TradeMarkerClientConfig.Bind(Config);
+        TradeMarkerLocalization.Refresh();
 
         try
         {
@@ -27,10 +29,10 @@ public sealed class Plugin : BaseUnityPlugin
         }
         catch (Exception exception)
         {
-            Logger.LogError($"Moe-TradeMarker 客户端初始化失败：{exception}");
+            Logger.LogError(TradeMarkerLocalization.Format(TradeMarkerText.ClientInitFailed, exception));
         }
 
-        Logger.LogInfo("Moe-TradeMarker 客户端已加载。");
+        Logger.LogInfo(TradeMarkerLocalization.Text(TradeMarkerText.ClientLoaded));
     }
 
     private void OnDestroy()
