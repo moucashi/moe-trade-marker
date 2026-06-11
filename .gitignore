@@ -1,0 +1,17 @@
+bin/
+obj/
+dist/
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.cache
+*.log
+*.pdb
+*.nupkg
+TestResults/
+Client/Libs/
+*.DotSettings.user
+Thumbs.db
+Desktop.ini

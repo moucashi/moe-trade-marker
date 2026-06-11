@@ -1,0 +1,40 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoeTradeMarker.Shared", "Shared\MoeTradeMarker.Shared.csproj", "{CE996F13-9733-4833-9628-377F53BFDC0C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoeTradeMarker.Server", "Server\MoeTradeMarker.Server.csproj", "{1DB5C3B4-BEBC-4093-B8BD-6D29E4490561}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoeTradeMarker.Client", "Client\MoeTradeMarker.Client.csproj", "{16B60D12-A88A-4C33-B531-6B91D56BBFF7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoeTradeMarker.Server.Tests", "tests\Server\MoeTradeMarker.Server.Tests.csproj", "{2E2F416C-0911-4C36-8783-721BB1AE8C18}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CE996F13-9733-4833-9628-377F53BFDC0C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CE996F13-9733-4833-9628-377F53BFDC0C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CE996F13-9733-4833-9628-377F53BFDC0C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CE996F13-9733-4833-9628-377F53BFDC0C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1DB5C3B4-BEBC-4093-B8BD-6D29E4490561}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1DB5C3B4-BEBC-4093-B8BD-6D29E4490561}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1DB5C3B4-BEBC-4093-B8BD-6D29E4490561}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1DB5C3B4-BEBC-4093-B8BD-6D29E4490561}.Release|Any CPU.Build.0 = Release|Any CPU
+		{16B60D12-A88A-4C33-B531-6B91D56BBFF7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{16B60D12-A88A-4C33-B531-6B91D56BBFF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{16B60D12-A88A-4C33-B531-6B91D56BBFF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{16B60D12-A88A-4C33-B531-6B91D56BBFF7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E2F416C-0911-4C36-8783-721BB1AE8C18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E2F416C-0911-4C36-8783-721BB1AE8C18}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E2F416C-0911-4C36-8783-721BB1AE8C18}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E2F416C-0911-4C36-8783-721BB1AE8C18}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,74 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <RootNamespace>MoeTradeMarker.Client</RootNamespace>
+    <AssemblyName>MoeTradeMarker.Client</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Library</OutputType>
+    <Version>0.1.0</Version>
+    <OutputPath>..\dist\BepInEx\plugins\MoeTradeMarker\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <SPTManagedPath Condition="'$(SPTPath)' != ''">$(SPTPath)\EscapeFromTarkov_Data\Managed</SPTManagedPath>
+    <SPTBepInExCorePath Condition="'$(SPTPath)' != ''">$(SPTPath)\BepInEx\core</SPTBepInExCorePath>
+    <UseSptClientReferences Condition="Exists('$(SPTManagedPath)\Assembly-CSharp.dll') and Exists('$(SPTBepInExCorePath)\BepInEx.dll')">true</UseSptClientReferences>
+    <DefineConstants Condition="'$(UseSptClientReferences)' == 'true'">$(DefineConstants);SPT_CLIENT</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\MoeTradeMarker.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseSptClientReferences)' == 'true'">
+    <Reference Include="0Harmony">
+      <HintPath>$(SPTBepInExCorePath)\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="BepInEx">
+      <HintPath>$(SPTBepInExCorePath)\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(SPTManagedPath)\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Comfort" Condition="Exists('$(SPTManagedPath)\Comfort.dll')">
+      <HintPath>$(SPTManagedPath)\Comfort.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json" Condition="Exists('$(SPTManagedPath)\Newtonsoft.Json.dll')">
+      <HintPath>$(SPTManagedPath)\Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(SPTManagedPath)\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(SPTManagedPath)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.EventSystemsModule">
+      <HintPath>$(SPTManagedPath)\UnityEngine.EventSystemsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(SPTManagedPath)\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(SPTManagedPath)\UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro" Condition="Exists('$(SPTManagedPath)\Unity.TextMeshPro.dll')">
+      <HintPath>$(SPTManagedPath)\Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>
