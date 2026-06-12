@@ -17,7 +17,7 @@ internal static class TradeMarkerClientConfig
 
     public static MarkerPosition MarkerPosition => markerPosition?.Value ?? MarkerPosition.LeftTop;
 
-    public static Color MarkerColor => markerColor?.Value ?? new Color(0.46f, 0.96f, 1f, 0.95f);
+    public static Color MarkerColor => markerColor?.Value ?? new Color(1f, 0.5f, 0.5f, 1f);
 
     public static TradeMarkerLanguageMode LanguageMode => languageMode?.Value ?? TradeMarkerLanguageMode.Auto;
 
@@ -40,7 +40,7 @@ internal static class TradeMarkerClientConfig
         markerColor = config.Bind(
             TradeMarkerLocalization.Text(TradeMarkerText.ConfigDisplaySection),
             "MarkerColor",
-            new Color(0.46f, 0.96f, 1f, 0.95f),
+            new Color(1f, 0.5f, 0.5f, 1f),
             TradeMarkerLocalization.Text(TradeMarkerText.ConfigMarkerColorDescription));
         markerColor.SettingChanged += (_, _) => TradeMarkerOverlay.ApplyCurrentConfigToVisibleMarkers();
 

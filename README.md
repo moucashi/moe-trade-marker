@@ -33,7 +33,7 @@ Client display options can be changed from the BepInEx configuration menu:
 
 - `ShowTraderMarker`: show or hide the trader marker.
 - `MarkerPosition`: `LeftTop`, `RightTop`, `LeftBottom`, `RightBottom`.
-- `MarkerColor`: marker icon color, light cyan by default.
+- `MarkerColor`: marker icon color, `1.00 0.50 0.50 1.00` by default.
 - `LanguageMode`: `Auto` follows the detected game language; manual values use SPT-supported language codes.
 
 ## Compatibility
