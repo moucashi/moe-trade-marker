@@ -1,0 +1,70 @@
+<Project>
+  <UsingTask
+    TaskName="CreateZipArchive"
+    TaskFactory="RoslynCodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <SourceDirectory ParameterType="System.String" Required="true" />
+      <DestinationFile ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.IO.Compression" />
+      <Code Type="Method" Language="cs"><![CDATA[
+      public override bool Execute()
+      {
+        if (!Directory.Exists(SourceDirectory))
+        {
+            Log.LogError("Package source directory does not exist: {0}", SourceDirectory);
+            return false;
+        }
+
+        var destinationDirectory = Path.GetDirectoryName(DestinationFile);
+        if (!string.IsNullOrWhiteSpace(destinationDirectory))
+        {
+            Directory.CreateDirectory(destinationDirectory);
+        }
+
+        if (File.Exists(DestinationFile))
+        {
+            File.Delete(DestinationFile);
+        }
+
+        ZipFile.CreateFromDirectory(SourceDirectory, DestinationFile, CompressionLevel.Optimal, false);
+        return true;
+      }
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <PropertyGroup>
+    <MoeTradeMarkerDistDirectory>$(MSBuildThisFileDirectory)dist\</MoeTradeMarkerDistDirectory>
+    <MoeTradeMarkerPackageStagingDirectory>$(MoeTradeMarkerDistDirectory)package\</MoeTradeMarkerPackageStagingDirectory>
+    <MoeTradeMarkerPackageFile>$(MoeTradeMarkerDistDirectory)Moe-TradeMarker-$(Version).zip</MoeTradeMarkerPackageFile>
+    <MoeTradeMarkerPackageEnabled Condition="'$(MoeTradeMarkerPackageEnabled)' == ''">true</MoeTradeMarkerPackageEnabled>
+  </PropertyGroup>
+
+  <Target
+    Name="PackageMoeTradeMarker"
+    AfterTargets="Build"
+    Condition="'$(MSBuildProjectName)' == 'MoeTradeMarker.Server' and '$(MoeTradeMarkerPackageEnabled)' == 'true' and '$(BuildProjectReferences)' != 'false'">
+    <ItemGroup>
+      <MoeTradeMarkerPackageFiles Include="$(MoeTradeMarkerDistDirectory)BepInEx\**\*.*">
+        <PackageRoot>BepInEx</PackageRoot>
+      </MoeTradeMarkerPackageFiles>
+      <MoeTradeMarkerPackageFiles Include="$(MoeTradeMarkerDistDirectory)SPT\**\*.*">
+        <PackageRoot>SPT</PackageRoot>
+      </MoeTradeMarkerPackageFiles>
+    </ItemGroup>
+    <RemoveDir Directories="$(MoeTradeMarkerPackageStagingDirectory)" />
+    <MakeDir Directories="$(MoeTradeMarkerPackageStagingDirectory)" />
+    <Copy
+      SourceFiles="@(MoeTradeMarkerPackageFiles)"
+      DestinationFiles="@(MoeTradeMarkerPackageFiles->'$(MoeTradeMarkerPackageStagingDirectory)%(PackageRoot)\%(RecursiveDir)%(Filename)%(Extension)')" />
+    <CreateZipArchive
+      SourceDirectory="$(MoeTradeMarkerPackageStagingDirectory)"
+      DestinationFile="$(MoeTradeMarkerPackageFile)" />
+    <RemoveDir Directories="$(MoeTradeMarkerPackageStagingDirectory)" />
+    <Message Importance="high" Text="Created package: $(MoeTradeMarkerPackageFile)" />
+  </Target>
+</Project>
