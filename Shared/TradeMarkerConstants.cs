@@ -9,5 +9,6 @@ public static class TradeMarkerConstants
     public const string TraderIdProperty = "traderId";
     public const string TraderInfoRoute = "/moe-trade-marker/traders";
     public const string ItemMarkerRoute = "/moe-trade-marker/markers";
+    public const string RagfairRestrictedTraderRoute = "/moe-trade-marker/ragfair-restricted-traders";
     public const string LanguageRoute = "/moe-trade-marker/language";
 }

@@ -38,4 +38,9 @@ public class TradeMarkerConfigService(
     {
         return Config.RagfairRestriction.IsEnabledForTrader(traderId);
     }
+
+    public bool IsRagfairRestrictionEnabled()
+    {
+        return Config.RagfairRestriction.Enabled;
+    }
 }

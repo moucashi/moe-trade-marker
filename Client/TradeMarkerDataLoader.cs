@@ -17,6 +17,7 @@ internal static class TradeMarkerDataLoader
     private static string? lastLoggedLanguageCode;
     private static Dictionary<string, string> traderNames = new(StringComparer.OrdinalIgnoreCase);
     private static Dictionary<string, string> itemMarkers = new(StringComparer.OrdinalIgnoreCase);
+    private static HashSet<string> ragfairRestrictedTraderIds = new(StringComparer.OrdinalIgnoreCase);
 
     public static bool TryGetTraderNameForItem(string itemId, out string traderName)
     {
@@ -42,6 +43,23 @@ internal static class TradeMarkerDataLoader
         return found;
     }
 
+    public static bool IsItemRestrictedFromRagfair(string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+        {
+            return false;
+        }
+
+        Refresh(force: false);
+        if (IsItemRestrictedFromRagfairCache(itemId))
+        {
+            return true;
+        }
+
+        Refresh(force: true);
+        return IsItemRestrictedFromRagfairCache(itemId);
+    }
+
     private static bool TryGetTraderNameFromCache(string itemId, out string traderName)
     {
         traderName = string.Empty;
@@ -56,6 +74,16 @@ internal static class TradeMarkerDataLoader
                 ? name
                 : traderId;
             return true;
+        }
+    }
+
+    private static bool IsItemRestrictedFromRagfairCache(string itemId)
+    {
+        lock (SyncRoot)
+        {
+            return itemMarkers.TryGetValue(itemId, out var traderId)
+                && !string.IsNullOrWhiteSpace(traderId)
+                && ragfairRestrictedTraderIds.Contains(traderId);
         }
     }
 
@@ -74,6 +102,7 @@ internal static class TradeMarkerDataLoader
             PostLanguage();
             var loadedTraderNames = GetDictionary(TradeMarkerConstants.TraderInfoRoute);
             var loadedItemMarkers = GetDictionary(TradeMarkerConstants.ItemMarkerRoute);
+            var loadedRestrictedTraderIds = GetStringSet(TradeMarkerConstants.RagfairRestrictedTraderRoute);
 
             lock (SyncRoot)
             {
@@ -85,6 +114,11 @@ internal static class TradeMarkerDataLoader
                 if (loadedItemMarkers is not null)
                 {
                     itemMarkers = loadedItemMarkers;
+                }
+
+                if (loadedRestrictedTraderIds is not null)
+                {
+                    ragfairRestrictedTraderIds = loadedRestrictedTraderIds;
                 }
             }
         }
@@ -116,6 +150,17 @@ internal static class TradeMarkerDataLoader
         }
 
         return ParseStringDictionary(json!);
+    }
+
+    private static HashSet<string>? GetStringSet(string route)
+    {
+        var json = GetJson(route);
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        return ParseStringArray(json!);
     }
 
     private static string? GetJson(string route)
@@ -204,6 +249,22 @@ internal static class TradeMarkerDataLoader
         foreach (Match match in Regex.Matches(json, "\"(?<key>(?:\\\\.|[^\"])*)\"\\s*:\\s*\"(?<value>(?:\\\\.|[^\"])*)\""))
         {
             result[DecodeJsonString(match.Groups["key"].Value)] = DecodeJsonString(match.Groups["value"].Value);
+        }
+
+        return result;
+    }
+
+    private static HashSet<string> ParseStringArray(string json)
+    {
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (Match match in Regex.Matches(json, "\"(?<value>(?:\\\\.|[^\"])*)\""))
+        {
+            var value = DecodeJsonString(match.Groups["value"].Value);
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                result.Add(value);
+            }
         }
 
         return result;

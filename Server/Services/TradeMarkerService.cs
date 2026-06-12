@@ -108,6 +108,25 @@ public class TradeMarkerService(
         return result;
     }
 
+    public List<string> GetRagfairRestrictedTraderIds()
+    {
+        if (!configService.IsRagfairRestrictionEnabled())
+        {
+            return [];
+        }
+
+        var traders = databaseServer.GetTables().Traders;
+        if (traders is null)
+        {
+            return [];
+        }
+
+        return traders.Keys
+            .Select(traderId => traderId.ToString())
+            .Where(configService.ShouldBlockRagfairListing)
+            .ToList();
+    }
+
     public Dictionary<string, string> GetMarkedItems(MongoId sessionId)
     {
         var result = new Dictionary<string, string>();

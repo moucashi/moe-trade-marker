@@ -7,7 +7,7 @@ using MoeTradeMarker.Shared;
 
 namespace MoeTradeMarker.Client;
 
-[BepInPlugin(TradeMarkerConstants.ClientGuid, TradeMarkerConstants.ModName, "0.3.3")]
+[BepInPlugin(TradeMarkerConstants.ClientGuid, TradeMarkerConstants.ModName, "0.4.3")]
 public sealed class Plugin : BaseUnityPlugin
 {
     private Harmony? harmony;

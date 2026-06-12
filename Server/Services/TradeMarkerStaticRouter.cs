@@ -38,6 +38,10 @@ public class TradeMarkerStaticRouter : StaticRouter
                 TradeMarkerConstants.ItemMarkerRoute,
                 static (url, info, sessionId, output) => HandleItemMarkerRoute(sessionId)
             ),
+            new RouteAction<EmptyRequestData>(
+                TradeMarkerConstants.RagfairRestrictedTraderRoute,
+                static (url, info, sessionId, output) => HandleRagfairRestrictedTraderRoute()
+            ),
             new RouteAction<SetLanguageRequest>(
                 TradeMarkerConstants.LanguageRoute,
                 static (url, info, sessionId, output) => HandleLanguageRoute(info, sessionId)
@@ -55,6 +59,12 @@ public class TradeMarkerStaticRouter : StaticRouter
     {
         var markedItems = RouterTradeMarkerService?.GetMarkedItems(sessionId) ?? [];
         return new ValueTask<string>(RouterJsonUtil?.Serialize(markedItems) ?? "{}");
+    }
+
+    private static ValueTask<string> HandleRagfairRestrictedTraderRoute()
+    {
+        var traderIds = RouterTradeMarkerService?.GetRagfairRestrictedTraderIds() ?? [];
+        return new ValueTask<string>(RouterJsonUtil?.Serialize(traderIds) ?? "[]");
     }
 
     private static ValueTask<string> HandleLanguageRoute(SetLanguageRequest request, MongoId sessionId)
