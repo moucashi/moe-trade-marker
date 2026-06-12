@@ -1,9 +1,9 @@
 #if SPT_CLIENT
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
+using MoeTradeMarker.Client;
 
 namespace MoeTradeMarker.Client.Patches;
 
@@ -57,41 +57,21 @@ internal static class RagfairAddOfferInteractionAvailabilityPatch
 
     private static object? GetItemFromContextInteractions(object contextInteractions)
     {
-        return GetFieldOrPropertyValue(contextInteractions, "Item_0")
-            ?? GetFieldOrPropertyValue(contextInteractions, "item_0")
-            ?? GetFieldOrPropertyValue(contextInteractions, "Item")
+        return TradeMarkerItemRestriction.GetFieldOrPropertyValue(contextInteractions, "Item_0")
+            ?? TradeMarkerItemRestriction.GetFieldOrPropertyValue(contextInteractions, "item_0")
+            ?? TradeMarkerItemRestriction.GetFieldOrPropertyValue(contextInteractions, "Item")
             ?? GetItemFromNestedItemContext(contextInteractions);
     }
 
     private static object? GetItemFromNestedItemContext(object contextInteractions)
     {
-        var itemContext = GetFieldOrPropertyValue(contextInteractions, "ItemContextAbstractClass")
-            ?? GetFieldOrPropertyValue(contextInteractions, "ItemContextAbstractClass_0")
-            ?? GetFieldOrPropertyValue(contextInteractions, "ItemContextAbstractClass_1");
+        var itemContext = TradeMarkerItemRestriction.GetFieldOrPropertyValue(contextInteractions, "ItemContextAbstractClass")
+            ?? TradeMarkerItemRestriction.GetFieldOrPropertyValue(contextInteractions, "ItemContextAbstractClass_0")
+            ?? TradeMarkerItemRestriction.GetFieldOrPropertyValue(contextInteractions, "ItemContextAbstractClass_1");
 
         return itemContext is null
             ? null
-            : GetFieldOrPropertyValue(itemContext, "Item");
-    }
-
-    private static object? GetFieldOrPropertyValue(object instance, string name)
-    {
-        for (var type = instance.GetType(); type is not null; type = type.BaseType)
-        {
-            var field = AccessTools.Field(type, name);
-            if (field is not null)
-            {
-                return field.GetValue(instance);
-            }
-
-            var property = AccessTools.Property(type, name);
-            if (property is not null)
-            {
-                return property.GetValue(instance);
-            }
-        }
-
-        return null;
+            : TradeMarkerItemRestriction.GetFieldOrPropertyValue(itemContext, "Item");
     }
 
     private static bool IsAddOfferInteraction(object? interaction)
@@ -106,53 +86,7 @@ internal static class RagfairAddOfferInteractionAvailabilityPatch
 
     private static bool ContainsRagfairRestrictedItem(object item)
     {
-        foreach (var current in EnumerateItemAndChildren(item))
-        {
-            var itemId = GetItemId(current);
-            if (TradeMarkerDataLoader.IsItemRestrictedFromRagfair(itemId))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static IEnumerable<object> EnumerateItemAndChildren(object item)
-    {
-        yield return item;
-
-        foreach (var child in GetVisibleChildren(item))
-        {
-            yield return child;
-        }
-    }
-
-    private static IEnumerable<object> GetVisibleChildren(object item)
-    {
-        var method = AccessTools.Method(item.GetType(), "GetAllVisibleItems", Type.EmptyTypes);
-        if (method?.Invoke(item, []) is not IEnumerable children)
-        {
-            yield break;
-        }
-
-        foreach (var child in children)
-        {
-            if (child is not null && !ReferenceEquals(child, item))
-            {
-                yield return child;
-            }
-        }
-    }
-
-    private static string GetItemId(object item)
-    {
-        var type = item.GetType();
-        var value = AccessTools.Property(type, "Id")?.GetValue(item)
-            ?? AccessTools.Field(type, "Id")?.GetValue(item)
-            ?? AccessTools.Field(type, "_id")?.GetValue(item);
-
-        return value?.ToString() ?? string.Empty;
+        return TradeMarkerItemRestriction.ContainsRagfairRestrictedItem(item);
     }
 
     private static object? CreateFailedResult()
