@@ -2,6 +2,9 @@
 
 [English README](README.md)
 
+[Forge 主页](https://forge.sp-tarkov.com/mod/2736/moe-trademarker)
+[ODDBA 帖子](https://sns.oddba.cn/?p=190592)
+
 Moe-TradeMarker 是一个面向 SPT 4.0+ 的组合 MOD，用于标记从 NPC 商人购买的物品，并限制带有商人标记的物品上架跳蚤市场。
 
 ## 功能
@@ -12,7 +15,7 @@ Moe-TradeMarker 是一个面向 SPT 4.0+ 的组合 MOD，用于标记从 NPC 商
 - 可通过服务端配置全局或按商人关闭上架限制。
 - 客户端在物品图标角落显示标记，并在悬浮提示中显示商人名称。
 - 客户端可配置图标位置和颜色，默认显示在左上角。
-- 玩家可见文本支持英文和简体中文；默认使用英文，检测到中文游戏或系统语言时自动切换为中文。
+- 玩家可见文本支持 SPT 客户端语言，包括英文、中文、法语、德语、意大利语、日语、韩语、波兰语、葡萄牙语、俄语、西班牙语和土耳其语等；默认使用英文，Auto 会尽量跟随检测到的游戏语言。
 
 ## 构建
 
@@ -35,3 +38,4 @@ dotnet build .\MoeTradeMarker.sln -p:SPTPath=C:\SPT
 - `ShowTraderMarker`: 是否显示商人标记。
 - `MarkerPosition`: `LeftTop`、`RightTop`、`LeftBottom`、`RightBottom`。
 - `MarkerColor`: 图标颜色，默认浅青色。
+- `LanguageMode`: `Auto` 会跟随检测到的游戏语言，也可手动选择 SPT 支持的语言。

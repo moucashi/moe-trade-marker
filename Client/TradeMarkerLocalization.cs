@@ -23,6 +23,21 @@ internal static class TradeMarkerLocalization
         {
             TradeMarkerLanguageMode.Chinese => TradeMarkerLanguage.Chinese,
             TradeMarkerLanguageMode.English => TradeMarkerLanguage.English,
+            TradeMarkerLanguageMode.Czech => TradeMarkerLanguage.Czech,
+            TradeMarkerLanguageMode.French => TradeMarkerLanguage.French,
+            TradeMarkerLanguageMode.German => TradeMarkerLanguage.German,
+            TradeMarkerLanguageMode.Hungarian => TradeMarkerLanguage.Hungarian,
+            TradeMarkerLanguageMode.Italian => TradeMarkerLanguage.Italian,
+            TradeMarkerLanguageMode.Japanese => TradeMarkerLanguage.Japanese,
+            TradeMarkerLanguageMode.Korean => TradeMarkerLanguage.Korean,
+            TradeMarkerLanguageMode.Polish => TradeMarkerLanguage.Polish,
+            TradeMarkerLanguageMode.Portuguese => TradeMarkerLanguage.Portuguese,
+            TradeMarkerLanguageMode.Slovak => TradeMarkerLanguage.Slovak,
+            TradeMarkerLanguageMode.Spanish => TradeMarkerLanguage.Spanish,
+            TradeMarkerLanguageMode.SpanishMexico => TradeMarkerLanguage.SpanishMexico,
+            TradeMarkerLanguageMode.Turkish => TradeMarkerLanguage.Turkish,
+            TradeMarkerLanguageMode.Russian => TradeMarkerLanguage.Russian,
+            TradeMarkerLanguageMode.Romanian => TradeMarkerLanguage.Romanian,
             _ => TradeMarkerLocalizer.DetectLanguage(DetectLanguageCode()),
         };
     }
@@ -37,7 +52,7 @@ internal static class TradeMarkerLocalization
         return TradeMarkerLocalizer.Format(key, Language, args);
     }
 
-    public static string LanguageCode => Language == TradeMarkerLanguage.Chinese ? "zh-CN" : "en";
+    public static string LanguageCode => TradeMarkerLocalizer.GetLanguageCode(Language);
 
     private static string? DetectLanguageCode()
     {
@@ -317,13 +332,7 @@ internal static class TradeMarkerLocalization
             return false;
         }
 
-        var normalized = text.Trim().Replace('_', '-').ToLowerInvariant();
-        return normalized is "en" or "ch" or "chs" or "cht" or "cn" or "zh" or "zh-cn" or "zh-hans" or "zh-hant" or "chinese" or "chinesesimplified" or "chinesetraditional"
-            || normalized.StartsWith("en-", StringComparison.Ordinal)
-            || normalized.StartsWith("zh-", StringComparison.Ordinal)
-            || normalized.StartsWith("cn-", StringComparison.Ordinal)
-            || normalized.StartsWith("ch-", StringComparison.Ordinal)
-            || normalized.StartsWith("chinese", StringComparison.Ordinal);
+        return TradeMarkerLocalizer.IsSupportedLanguageCode(text);
     }
 }
 #endif
