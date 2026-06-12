@@ -1,5 +1,6 @@
 #if SPT_CLIENT
 using BepInEx.Configuration;
+using MoeTradeMarker.Client.Patches;
 using MoeTradeMarker.Shared;
 using UnityEngine;
 
@@ -27,6 +28,7 @@ internal static class TradeMarkerClientConfig
             "ShowTraderMarker",
             true,
             TradeMarkerLocalization.Text(TradeMarkerText.ConfigShowTraderMarkerDescription));
+        showTraderMarker.SettingChanged += (_, _) => ItemViewTradeMarkerPatch.RefreshTrackedItemViews();
 
         markerPosition = config.Bind(
             TradeMarkerLocalization.Text(TradeMarkerText.ConfigDisplaySection),

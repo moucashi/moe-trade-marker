@@ -14,6 +14,7 @@ namespace MoeTradeMarker.Client.Patches;
 internal static class ItemViewTradeMarkerPatch
 {
     private const string OverlayName = "MoeTradeMarkerIcon";
+    private static readonly List<WeakReference<Component>> ActiveItemViews = [];
 
     private static IEnumerable<MethodBase> TargetMethods()
     {
@@ -37,6 +38,11 @@ internal static class ItemViewTradeMarkerPatch
 
     private static void Postfix(object __instance)
     {
+        if (__instance is Component itemViewComponent)
+        {
+            TrackItemView(itemViewComponent);
+        }
+
         if (!TradeMarkerClientConfig.ShowTraderMarker)
         {
             TradeMarkerOverlay.HideFromItemView(__instance, OverlayName);
@@ -65,19 +71,40 @@ internal static class ItemViewTradeMarkerPatch
             return;
         }
 
-        if (__instance is not Component itemViewComponent)
+        if (__instance is not Component itemView)
         {
             Plugin.Log.LogDebug(TradeMarkerLocalization.Format(TradeMarkerText.ClientItemViewComponentReadFailed, itemId));
             return;
         }
 
         TradeMarkerOverlay.ShowOnItemView(
-            itemViewComponent,
+            itemView,
             OverlayName,
-            traderName,
-            FindTooltip(__instance),
             TradeMarkerClientConfig.MarkerPosition,
             TradeMarkerClientConfig.MarkerColor);
+    }
+
+    public static void RefreshTrackedItemViews()
+    {
+        TradeMarkerOverlay.ApplyVisibilityToVisibleMarkers();
+        ActiveItemViews.RemoveAll(reference => !reference.TryGetTarget(out var itemView) || itemView is null);
+        foreach (var reference in ActiveItemViews)
+        {
+            if (reference.TryGetTarget(out var itemView) && itemView is not null)
+            {
+                Postfix(itemView);
+            }
+        }
+    }
+
+    private static void TrackItemView(Component itemView)
+    {
+        if (ActiveItemViews.Any(reference => reference.TryGetTarget(out var tracked) && tracked == itemView))
+        {
+            return;
+        }
+
+        ActiveItemViews.Add(new WeakReference<Component>(itemView));
     }
 
     private static object? GetItem(object itemView)
@@ -93,26 +120,6 @@ internal static class ItemViewTradeMarkerPatch
         var type = itemView.GetType();
         return AccessTools.Field(type, "MainImage")?.GetValue(itemView) as Image
             ?? AccessTools.Property(type, "MainImage")?.GetValue(itemView) as Image;
-    }
-
-    private static object? FindTooltip(object itemView)
-    {
-        var itemUiContext = AccessTools.Field(itemView.GetType(), "ItemUiContext")?.GetValue(itemView)
-            ?? AccessTools.Property(itemView.GetType(), "ItemUiContext")?.GetValue(itemView);
-        if (itemUiContext is null)
-        {
-            return null;
-        }
-
-        foreach (var field in itemUiContext.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
-        {
-            if (field.FieldType.FullName?.IndexOf("SimpleTooltip", StringComparison.OrdinalIgnoreCase) >= 0)
-            {
-                return field.GetValue(itemUiContext);
-            }
-        }
-
-        return null;
     }
 
     private static string GetItemId(object item)

@@ -10,7 +10,7 @@ public record ModMetadata : AbstractModMetadata
     public override string Name { get; init; } = TradeMarkerConstants.ModName;
     public override string Author { get; init; } = "moe";
     public override List<string>? Contributors { get; init; }
-    public override SemanticVersioning.Version Version { get; init; } = new("0.3.0");
+    public override SemanticVersioning.Version Version { get; init; } = new("0.3.3");
     public override SemanticVersioning.Range SptVersion { get; init; } = new("~4.0.0");
     public override List<string>? Incompatibilities { get; init; }
     public override Dictionary<string, SemanticVersioning.Range>? ModDependencies { get; init; }

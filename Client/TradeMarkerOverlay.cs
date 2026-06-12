@@ -4,7 +4,6 @@ using System.Linq;
 using System.Reflection;
 using MoeTradeMarker.Shared;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace MoeTradeMarker.Client;
@@ -14,21 +13,16 @@ internal static class TradeMarkerOverlay
     private static readonly List<WeakReference<Image>> ActiveMarkers = [];
     private static Sprite? iconSprite;
 
-    public static void ShowOnItemView(Component itemView, string overlayName, string traderName, object? tooltip, MarkerPosition position, Color color)
+    public static void ShowOnItemView(Component itemView, string overlayName, MarkerPosition position, Color color)
     {
         var overlay = GetOrCreateOverlay(itemView, overlayName);
         overlay.color = color;
         iconSprite ??= CreateMarkerSprite();
         overlay.sprite = iconSprite;
-        overlay.raycastTarget = true;
+        overlay.raycastTarget = false;
 
         Position(overlay.rectTransform, position);
         TrackMarker(overlay);
-
-        var trigger = overlay.GetComponent<TradeMarkerTooltipTrigger>()
-            ?? overlay.gameObject.AddComponent<TradeMarkerTooltipTrigger>();
-        trigger.Tooltip = tooltip;
-        trigger.Text = TradeMarkerLocalization.Format(TradeMarkerText.TooltipTraderMarker, traderName);
 
         overlay.gameObject.SetActive(true);
     }
@@ -54,6 +48,18 @@ internal static class TradeMarkerOverlay
 
             marker.color = TradeMarkerClientConfig.MarkerColor;
             Position(marker.rectTransform, TradeMarkerClientConfig.MarkerPosition);
+        }
+    }
+
+    public static void ApplyVisibilityToVisibleMarkers()
+    {
+        ActiveMarkers.RemoveAll(reference => !reference.TryGetTarget(out var image) || image is null);
+        foreach (var reference in ActiveMarkers)
+        {
+            if (reference.TryGetTarget(out var marker) && marker is not null)
+            {
+                marker.gameObject.SetActive(TradeMarkerClientConfig.ShowTraderMarker);
+            }
         }
     }
 
@@ -187,39 +193,6 @@ internal static class TradeMarkerOverlay
     private static bool Contains(string? value, string part, StringComparison comparison)
     {
         return value?.IndexOf(part, comparison) >= 0;
-    }
-}
-
-internal sealed class TradeMarkerTooltipTrigger : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
-{
-    public object? Tooltip { get; set; }
-
-    public string Text { get; set; } = string.Empty;
-
-    public void OnPointerEnter(PointerEventData eventData)
-    {
-        InvokeTooltip(new[] { "Show", "ShowTooltip", "ShowMessage" }, Text);
-    }
-
-    public void OnPointerExit(PointerEventData eventData)
-    {
-        InvokeTooltip(new[] { "Close", "Hide", "CloseTooltip", "HideTooltip" });
-    }
-
-    private void InvokeTooltip(string[] methodNames, params object[] args)
-    {
-        if (Tooltip is null)
-        {
-            return;
-        }
-
-        var method = Tooltip.GetType()
-            .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-            .FirstOrDefault(info => methodNames.Contains(info.Name)
-                && info.GetParameters().Length == args.Length
-                && info.GetParameters().Zip(args, (parameter, arg) => parameter.ParameterType.IsInstanceOfType(arg) || parameter.ParameterType == typeof(string)).All(match => match));
-
-        method?.Invoke(Tooltip, args);
     }
 }
 #endif
