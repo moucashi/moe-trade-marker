@@ -15,7 +15,7 @@ internal static class RagfairAddOfferInteractionAvailabilityPatch
 
     private static IEnumerable<MethodBase> TargetMethods()
     {
-        var contextInteractionsType = AccessTools.TypeByName("ContextInteractionsAbstractClass");
+        var contextInteractionsType = AccessTools.TypeByName("EFT.UI.BaseItemContextInteractions");
         if (contextInteractionsType is null)
         {
             yield break;

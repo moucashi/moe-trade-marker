@@ -7,7 +7,7 @@ using MoeTradeMarker.Shared;
 
 namespace MoeTradeMarker.Client;
 
-[BepInPlugin(TradeMarkerConstants.ClientGuid, TradeMarkerConstants.ModName, "1.2.0")]
+[BepInPlugin(TradeMarkerConstants.ClientGuid, TradeMarkerConstants.ModName, "1.2.1")]
 [BepInDependency("com.blackhawk.quicksell", BepInDependency.DependencyFlags.SoftDependency)]
 public sealed class Plugin : BaseUnityPlugin
 {
@@ -25,7 +25,7 @@ public sealed class Plugin : BaseUnityPlugin
         try
         {
             harmony = new Harmony(TradeMarkerConstants.ClientGuid);
-            harmony.PatchAll(typeof(ItemViewTradeMarkerPatch).Assembly);
+            InstallPatches(harmony);
             TradeMarkerDataLoader.RequestRefresh(force: true);
         }
         catch (Exception exception)
@@ -34,6 +34,24 @@ public sealed class Plugin : BaseUnityPlugin
         }
 
         Logger.LogInfo(TradeMarkerLocalization.Text(TradeMarkerText.ClientLoaded));
+    }
+
+    private void InstallPatches(Harmony harmonyInstance)
+    {
+        var patchTypes = typeof(ItemViewTradeMarkerPatch).Assembly.GetTypes()
+            .Where(type => type.GetCustomAttributes(typeof(HarmonyPatch), inherit: false).Length > 0);
+
+        foreach (var patchType in patchTypes)
+        {
+            try
+            {
+                harmonyInstance.CreateClassProcessor(patchType).Patch();
+            }
+            catch (Exception exception)
+            {
+                Logger.LogError($"Moe-TradeMarker failed to install patch {patchType.FullName}: {exception}");
+            }
+        }
     }
 
     private void Update()
