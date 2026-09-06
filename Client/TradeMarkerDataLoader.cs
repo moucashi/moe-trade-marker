@@ -5,6 +5,8 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using MoeTradeMarker.Shared;
 
 namespace MoeTradeMarker.Client;
@@ -14,6 +16,8 @@ internal static class TradeMarkerDataLoader
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(5);
     private static readonly object SyncRoot = new();
     private static DateTime lastRefreshUtc = DateTime.MinValue;
+    private static int refreshInProgress;
+    private static int refreshCompletedPending;
     private static string? lastLoggedLanguageCode;
     private static Dictionary<string, string> traderNames = new(StringComparer.OrdinalIgnoreCase);
     private static Dictionary<string, string> itemMarkers = new(StringComparer.OrdinalIgnoreCase);
@@ -27,20 +31,8 @@ internal static class TradeMarkerDataLoader
             return false;
         }
 
-        Refresh(force: false);
-        if (TryGetTraderNameFromCache(itemId, out traderName))
-        {
-            return true;
-        }
-
-        Refresh(force: true);
-        var found = TryGetTraderNameFromCache(itemId, out traderName);
-        if (!found)
-        {
-            Plugin.Log.LogDebug(TradeMarkerLocalization.Format(TradeMarkerText.ClientItemMarkerMissing, itemId));
-        }
-
-        return found;
+        RequestRefresh(force: false);
+        return TryGetTraderNameFromCache(itemId, out traderName);
     }
 
     public static bool IsItemRestrictedFromRagfair(string itemId)
@@ -50,13 +42,7 @@ internal static class TradeMarkerDataLoader
             return false;
         }
 
-        Refresh(force: false);
-        if (IsItemRestrictedFromRagfairCache(itemId))
-        {
-            return true;
-        }
-
-        Refresh(force: true);
+        RequestRefresh(force: false);
         return IsItemRestrictedFromRagfairCache(itemId);
     }
 
@@ -87,19 +73,36 @@ internal static class TradeMarkerDataLoader
         }
     }
 
-    public static void Refresh(bool force)
+    public static void RequestRefresh(bool force)
     {
         var now = DateTime.UtcNow;
-        if (!force && now - lastRefreshUtc < RefreshInterval)
+        lock (SyncRoot)
+        {
+            if (!force && now - lastRefreshUtc < RefreshInterval)
+            {
+                return;
+            }
+
+            lastRefreshUtc = now;
+        }
+
+        if (Interlocked.CompareExchange(ref refreshInProgress, 1, 0) != 0)
         {
             return;
         }
 
-        lastRefreshUtc = now;
+        Task.Run(RefreshCore);
+    }
+
+    public static bool ConsumeRefreshCompleted()
+    {
+        return Interlocked.Exchange(ref refreshCompletedPending, 0) != 0;
+    }
+
+    private static void RefreshCore()
+    {
         try
         {
-            TradeMarkerLocalization.Refresh();
-            PostLanguage();
             var loadedTraderNames = GetDictionary(TradeMarkerConstants.TraderInfoRoute);
             var loadedItemMarkers = GetDictionary(TradeMarkerConstants.ItemMarkerRoute);
             var loadedRestrictedTraderIds = GetStringSet(TradeMarkerConstants.RagfairRestrictedTraderRoute);
@@ -121,10 +124,16 @@ internal static class TradeMarkerDataLoader
                     ragfairRestrictedTraderIds = loadedRestrictedTraderIds;
                 }
             }
+
+            Interlocked.Exchange(ref refreshCompletedPending, 1);
         }
         catch (Exception exception)
         {
             Plugin.Log.LogDebug(TradeMarkerLocalization.Format(TradeMarkerText.ClientMarkerRefreshFailed, exception.Message));
+        }
+        finally
+        {
+            Interlocked.Exchange(ref refreshInProgress, 0);
         }
     }
 

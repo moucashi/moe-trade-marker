@@ -12,9 +12,10 @@ Moe-TradeMarker helps you tell trader-bought items apart at a glance. When you b
 - Trader names in item hover tooltips.
 - Optional flea market protection for marked trader-bought items.
 - Global and per-trader settings if you want to loosen or disable the rules.
-- Client options for marker position and color.
+- Client options for marker position and color, defaulting to the bottom-left position on new installs.
 - Expanded multilingual display support for player-facing marker text.
 - Auto language mode that follows the detected game language when possible.
+- Optional BlackHawk QuickSell support disables `QuickSell (Flea)` for restricted items.
 
 ## Installation
 
@@ -32,7 +33,7 @@ Server options are in `SPT/user/mods/Moe-TradeMarker/config.json` after installa
 Client display options can be changed from the BepInEx configuration menu:
 
 - `ShowTraderMarker`: show or hide the trader marker.
-- `MarkerPosition`: `LeftTop`, `RightTop`, `LeftBottom`, `RightBottom`.
+- `MarkerPosition`: `LeftTop`, `RightTop`, `LeftBottom`, `RightBottom`; new installs default to `LeftBottom`.
 - `MarkerColor`: marker icon color, `1.00 0.50 0.50 1.00` by default.
 - `LanguageMode`: `Auto` follows the detected game language; manual values use SPT-supported language codes.
 

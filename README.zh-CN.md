@@ -13,9 +13,10 @@ Moe-TradeMarker 的目标很简单：让你一眼看出哪些物品是从 NPC �
 - 物品悬浮提示会显示对应商人名称。
 - 可选的跳蚤市场限制，防止商人货被转卖。
 - 可以全局或按商人调整购买标记和跳蚤限制。
-- 可以在 BepInEx 配置菜单中调整角标位置和颜色。
+- 可以在 BepInEx 配置菜单中调整角标位置和颜色，新安装默认显示在左下角。
 - 扩展玩家可见标记文本的多语言显示支持。
 - `Auto` 语言模式会尽量跟随检测到的游戏语言。
+- 可选兼容 BlackHawk QuickSell；受限物品的 `QuickSell (Flea)` 菜单会置灰。
 
 ## 安装
 
@@ -33,7 +34,7 @@ Moe-TradeMarker 的目标很简单：让你一眼看出哪些物品是从 NPC �
 客户端显示选项可在 BepInEx 配置菜单中调整：
 
 - `ShowTraderMarker`: 是否显示商人标记。
-- `MarkerPosition`: `LeftTop`、`RightTop`、`LeftBottom`、`RightBottom`。
+- `MarkerPosition`: `LeftTop`、`RightTop`、`LeftBottom`、`RightBottom`，新安装默认为 `LeftBottom`。
 - `MarkerColor`: 图标颜色，默认为 `1.00 0.50 0.50 1.00`。
 - `LanguageMode`: `Auto` 会跟随检测到的游戏语言，也可手动选择 SPT 支持的语言。
 

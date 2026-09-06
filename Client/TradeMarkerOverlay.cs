@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using MoeTradeMarker.Shared;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,6 +12,8 @@ namespace MoeTradeMarker.Client;
 internal static class TradeMarkerOverlay
 {
     private static readonly List<WeakReference<Image>> ActiveMarkers = [];
+    private static readonly ConditionalWeakTable<Image, object> TrackedMarkers = new();
+    private static readonly object TrackedMarker = new();
     private static Sprite? iconSprite;
 
     public static void ShowOnItemView(Component itemView, string overlayName, MarkerPosition position, Color color)
@@ -124,11 +127,12 @@ internal static class TradeMarkerOverlay
 
     private static void TrackMarker(Image marker)
     {
-        if (ActiveMarkers.Any(reference => reference.TryGetTarget(out var image) && image == marker))
+        if (TrackedMarkers.TryGetValue(marker, out _))
         {
             return;
         }
 
+        TrackedMarkers.Add(marker, TrackedMarker);
         ActiveMarkers.Add(new WeakReference<Image>(marker));
     }
 

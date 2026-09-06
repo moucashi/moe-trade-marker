@@ -1,4 +1,5 @@
 #if SPT_CLIENT
+using System.ComponentModel;
 using BepInEx.Configuration;
 using MoeTradeMarker.Client.Patches;
 using MoeTradeMarker.Shared;
@@ -15,7 +16,7 @@ internal static class TradeMarkerClientConfig
 
     public static bool ShowTraderMarker => showTraderMarker?.Value ?? true;
 
-    public static MarkerPosition MarkerPosition => markerPosition?.Value ?? MarkerPosition.LeftTop;
+    public static MarkerPosition MarkerPosition => markerPosition?.Value ?? MarkerPosition.LeftBottom;
 
     public static Color MarkerColor => markerColor?.Value ?? new Color(1f, 0.5f, 0.5f, 1f);
 
@@ -24,32 +25,56 @@ internal static class TradeMarkerClientConfig
     public static void Bind(ConfigFile config)
     {
         showTraderMarker = config.Bind(
-            TradeMarkerLocalization.Text(TradeMarkerText.ConfigGeneralSection),
+            "General",
             "ShowTraderMarker",
             true,
-            TradeMarkerLocalization.Text(TradeMarkerText.ConfigShowTraderMarkerDescription));
+            CreateDescription(
+                TradeMarkerText.ConfigShowTraderMarkerName,
+                TradeMarkerText.ConfigGeneralSection,
+                TradeMarkerText.ConfigShowTraderMarkerDescription));
         showTraderMarker.SettingChanged += (_, _) => ItemViewTradeMarkerPatch.RefreshTrackedItemViews();
 
         markerPosition = config.Bind(
-            TradeMarkerLocalization.Text(TradeMarkerText.ConfigDisplaySection),
+            "Display",
             "MarkerPosition",
-            MarkerPosition.LeftTop,
-            TradeMarkerLocalization.Text(TradeMarkerText.ConfigMarkerPositionDescription));
+            MarkerPosition.LeftBottom,
+            CreateDescription(
+                TradeMarkerText.ConfigMarkerPositionName,
+                TradeMarkerText.ConfigDisplaySection,
+                TradeMarkerText.ConfigMarkerPositionDescription));
         markerPosition.SettingChanged += (_, _) => TradeMarkerOverlay.ApplyCurrentConfigToVisibleMarkers();
 
         markerColor = config.Bind(
-            TradeMarkerLocalization.Text(TradeMarkerText.ConfigDisplaySection),
+            "Display",
             "MarkerColor",
             new Color(1f, 0.5f, 0.5f, 1f),
-            TradeMarkerLocalization.Text(TradeMarkerText.ConfigMarkerColorDescription));
+            CreateDescription(
+                TradeMarkerText.ConfigMarkerColorName,
+                TradeMarkerText.ConfigDisplaySection,
+                TradeMarkerText.ConfigMarkerColorDescription));
         markerColor.SettingChanged += (_, _) => TradeMarkerOverlay.ApplyCurrentConfigToVisibleMarkers();
 
         languageMode = config.Bind(
-            TradeMarkerLocalization.Text(TradeMarkerText.ConfigGeneralSection),
+            "General",
             "LanguageMode",
             TradeMarkerLanguageMode.Auto,
-            TradeMarkerLocalization.Text(TradeMarkerText.ConfigLanguageModeDescription));
+            CreateDescription(
+                TradeMarkerText.ConfigLanguageModeName,
+                TradeMarkerText.ConfigGeneralSection,
+                TradeMarkerText.ConfigLanguageModeDescription));
         languageMode.SettingChanged += (_, _) => TradeMarkerDataLoader.SyncLanguage();
+    }
+
+    private static ConfigDescription CreateDescription(
+        TradeMarkerText name,
+        TradeMarkerText category,
+        TradeMarkerText description)
+    {
+        return new ConfigDescription(
+            TradeMarkerLocalization.Text(description),
+            null,
+            new DisplayNameAttribute(TradeMarkerLocalization.Text(name)),
+            new CategoryAttribute(TradeMarkerLocalization.Text(category)));
     }
 }
 #endif

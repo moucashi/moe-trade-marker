@@ -7,7 +7,8 @@ using MoeTradeMarker.Shared;
 
 namespace MoeTradeMarker.Client;
 
-[BepInPlugin(TradeMarkerConstants.ClientGuid, TradeMarkerConstants.ModName, "1.1.0")]
+[BepInPlugin(TradeMarkerConstants.ClientGuid, TradeMarkerConstants.ModName, "1.2.0")]
+[BepInDependency("com.blackhawk.quicksell", BepInDependency.DependencyFlags.SoftDependency)]
 public sealed class Plugin : BaseUnityPlugin
 {
     private Harmony? harmony;
@@ -25,7 +26,7 @@ public sealed class Plugin : BaseUnityPlugin
         {
             harmony = new Harmony(TradeMarkerConstants.ClientGuid);
             harmony.PatchAll(typeof(ItemViewTradeMarkerPatch).Assembly);
-            TradeMarkerDataLoader.Refresh(force: true);
+            TradeMarkerDataLoader.RequestRefresh(force: true);
         }
         catch (Exception exception)
         {
@@ -33,6 +34,14 @@ public sealed class Plugin : BaseUnityPlugin
         }
 
         Logger.LogInfo(TradeMarkerLocalization.Text(TradeMarkerText.ClientLoaded));
+    }
+
+    private void Update()
+    {
+        if (TradeMarkerDataLoader.ConsumeRefreshCompleted())
+        {
+            ItemViewTradeMarkerPatch.RefreshTrackedItemViews();
+        }
     }
 
     private void OnDestroy()

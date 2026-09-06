@@ -79,6 +79,7 @@ internal static class TradeMarkerLocalization
     {
         foreach (var root in GetClientRootPaths())
         {
+            yield return Path.Combine(root, "SPT_Runtime", "user", "sptsettings", "Game.ini");
             yield return Path.Combine(root, "SPT", "user", "sptsettings", "Game.ini");
             yield return Path.Combine(root, "user", "sptsettings", "Game.ini");
         }

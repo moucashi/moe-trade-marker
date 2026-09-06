@@ -87,4 +87,16 @@ public class TradeMarkerLocalizerTests
         Assert.Contains("барахолку", russian);
         Assert.Contains("mercadillo", spanish);
     }
+
+    [Theory]
+    [InlineData(TradeMarkerText.ConfigGeneralSection, "通用")]
+    [InlineData(TradeMarkerText.ConfigDisplaySection, "显示")]
+    [InlineData(TradeMarkerText.ConfigShowTraderMarkerName, "显示商人标记")]
+    [InlineData(TradeMarkerText.ConfigMarkerPositionName, "标记位置")]
+    [InlineData(TradeMarkerText.ConfigMarkerColorName, "标记颜色")]
+    [InlineData(TradeMarkerText.ConfigLanguageModeName, "语言模式")]
+    public void Text_ReturnsChineseConfigurationLabels(TradeMarkerText key, string expected)
+    {
+        Assert.Equal(expected, TradeMarkerLocalizer.Text(key, TradeMarkerLanguage.Chinese));
+    }
 }

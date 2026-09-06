@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using HarmonyLib;
 using MoeTradeMarker.Shared;
 using UnityEngine;
@@ -15,6 +16,8 @@ internal static class ItemViewTradeMarkerPatch
 {
     private const string OverlayName = "MoeTradeMarkerIcon";
     private static readonly List<WeakReference<Component>> ActiveItemViews = [];
+    private static readonly ConditionalWeakTable<Component, object> TrackedItemViews = new();
+    private static readonly object TrackedMarker = new();
 
     private static IEnumerable<MethodBase> TargetMethods()
     {
@@ -99,11 +102,12 @@ internal static class ItemViewTradeMarkerPatch
 
     private static void TrackItemView(Component itemView)
     {
-        if (ActiveItemViews.Any(reference => reference.TryGetTarget(out var tracked) && tracked == itemView))
+        if (TrackedItemViews.TryGetValue(itemView, out _))
         {
             return;
         }
 
+        TrackedItemViews.Add(itemView, TrackedMarker);
         ActiveItemViews.Add(new WeakReference<Component>(itemView));
     }
 
