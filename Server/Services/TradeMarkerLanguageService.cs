@@ -3,7 +3,7 @@ using System.Reflection;
 using MoeTradeMarker.Shared;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Models.Common;
-using SPTarkov.Server.Core.Services;
+using SPTarkov.Server.Core.Services.Locales;
 
 namespace MoeTradeMarker.Server.Services;
 

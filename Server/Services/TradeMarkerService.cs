@@ -2,7 +2,7 @@ using System.Text.Json;
 using MoeTradeMarker.Shared;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Extensions;
-using SPTarkov.Server.Core.Helpers;
+using SPTarkov.Server.Core.Helpers.Profile;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
@@ -10,9 +10,8 @@ using SPTarkov.Server.Core.Models.Eft.ItemEvent;
 using SPTarkov.Server.Core.Models.Eft.Ragfair;
 using SPTarkov.Server.Core.Models.Eft.Trade;
 using SPTarkov.Server.Core.Models.Utils;
+using SPTarkov.Server.Core.Models.Spt.Tables;
 using SPTarkov.Server.Core.Routers;
-using SPTarkov.Server.Core.Servers;
-using SPTarkov.Server.Core.Services;
 using SPTarkov.Server.Core.Utils;
 
 namespace MoeTradeMarker.Server.Services;
@@ -20,7 +19,7 @@ namespace MoeTradeMarker.Server.Services;
 [Injectable(InjectionType = InjectionType.Singleton)]
 public class TradeMarkerService(
     TradeMarkerConfigService configService,
-    DatabaseServer databaseServer,
+    TradersTable traders,
     EventOutputHolder eventOutputHolder,
     ProfileHelper profileHelper,
     HttpResponseUtil httpResponseUtil,
@@ -94,12 +93,6 @@ public class TradeMarkerService(
     public Dictionary<string, string> GetTraderNames()
     {
         var result = new Dictionary<string, string>();
-        var traders = databaseServer.GetTables().Traders;
-        if (traders is null)
-        {
-            return result;
-        }
-
         foreach (var (traderId, trader) in traders)
         {
             result[traderId.ToString()] = trader.Base.Nickname ?? trader.Base.Name ?? traderId.ToString();
@@ -111,12 +104,6 @@ public class TradeMarkerService(
     public List<string> GetRagfairRestrictedTraderIds()
     {
         if (!configService.IsRagfairRestrictionEnabled())
-        {
-            return [];
-        }
-
-        var traders = databaseServer.GetTables().Traders;
-        if (traders is null)
         {
             return [];
         }
@@ -158,8 +145,7 @@ public class TradeMarkerService(
         try
         {
             var mongoId = new MongoId(traderId);
-            var traders = databaseServer.GetTables().Traders;
-            if (traders is not null && traders.TryGetValue(mongoId, out var trader))
+            if (traders.TryGetValue(mongoId, out var trader))
             {
                 return trader.Base.Nickname ?? trader.Base.Name ?? traderId;
             }

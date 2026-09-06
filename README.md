@@ -38,13 +38,13 @@ Client display options can be changed from the BepInEx configuration menu:
 
 ## Compatibility
 
-Built for SPT 4.0+. Tested against SPTarkov 4.0.13.
+Built for SPT 4.1.x. Tested against SPT 4.1.5 and EFT 0.16.9.5.40743.
 
 Player-facing text is localized for SPT-supported languages including English, Chinese, French, German, Italian, Japanese, Korean, Polish, Portuguese, Russian, Spanish, and Turkish. English is used as the fallback.
 
 ## Build
 
-The server project depends on SPTarkov NuGet packages `4.0.13`.
+The server project targets .NET 10 and depends on SPTushonka NuGet packages `4.1.5`.
 
 The client project builds a real BepInEx plugin with NuGet reference assemblies by default. You can also set `SPTPath` to your SPT installation directory so the build prefers local SPT client assemblies:
 

@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using BepInEx;
 using MoeTradeMarker.Shared;
 
 namespace MoeTradeMarker.Client;
@@ -87,20 +86,10 @@ internal static class TradeMarkerLocalization
 
     private static IEnumerable<string> GetClientRootPaths()
     {
-        if (!string.IsNullOrWhiteSpace(Paths.GameRootPath))
+        var gameRootPath = AppDomain.CurrentDomain.BaseDirectory;
+        if (!string.IsNullOrWhiteSpace(gameRootPath))
         {
-            yield return Paths.GameRootPath;
-        }
-
-        if (!string.IsNullOrWhiteSpace(Paths.PluginPath))
-        {
-            var pluginDirectory = new DirectoryInfo(Paths.PluginPath);
-            var bepInExDirectory = pluginDirectory.Parent;
-            var clientRoot = bepInExDirectory?.Parent;
-            if (clientRoot is not null)
-            {
-                yield return clientRoot.FullName;
-            }
+            yield return gameRootPath;
         }
     }
 

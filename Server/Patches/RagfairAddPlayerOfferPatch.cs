@@ -1,7 +1,5 @@
 using System.Reflection;
-using Microsoft.Extensions.DependencyInjection;
 using MoeTradeMarker.Server.Services;
-using SPTarkov.Server.Core.DI;
 using SPTarkov.Reflection.Patching;
 using SPTarkov.Server.Core.Controllers;
 using SPTarkov.Server.Core.Models.Common;
@@ -14,18 +12,22 @@ namespace MoeTradeMarker.Server.Patches;
 
 public class RagfairAddPlayerOfferPatch : AbstractPatch
 {
+    private static TradeMarkerService tradeMarkerService = null!;
+
+    public RagfairAddPlayerOfferPatch(TradeMarkerService service)
+    {
+        tradeMarkerService = service;
+    }
+
     protected override MethodBase GetTargetMethod()
     {
         return typeof(RagfairController).GetMethod(nameof(RagfairController.AddPlayerOffer))!;
     }
 
     [PatchPrefix]
-    public static bool Prefix(PmcData pmcData, AddOfferRequestData offerRequest, MongoId sessionID, ref ItemEventRouterResponse __result)
+    public static bool Prefix(PmcData __0, AddOfferRequestData __1, MongoId __2, ref ItemEventRouterResponse __result)
     {
-#pragma warning disable CS0618
-        var tradeMarkerService = ServiceLocator.ServiceProvider.GetRequiredService<TradeMarkerService>();
-#pragma warning restore CS0618
-        if (!tradeMarkerService.TryBlockRagfairOffer(pmcData, offerRequest, sessionID, out var response))
+        if (!tradeMarkerService.TryBlockRagfairOffer(__0, __1, __2, out var response))
         {
             return true;
         }

@@ -32,19 +32,19 @@ public class TradeMarkerStaticRouter : StaticRouter
         [
             new RouteAction<EmptyRequestData>(
                 TradeMarkerConstants.TraderInfoRoute,
-                static (url, info, sessionId, output) => HandleTraderInfoRoute(sessionId)
+                static (url, info, sessionId, output, cancellationToken) => HandleTraderInfoRoute(sessionId)
             ),
             new RouteAction<EmptyRequestData>(
                 TradeMarkerConstants.ItemMarkerRoute,
-                static (url, info, sessionId, output) => HandleItemMarkerRoute(sessionId)
+                static (url, info, sessionId, output, cancellationToken) => HandleItemMarkerRoute(sessionId)
             ),
             new RouteAction<EmptyRequestData>(
                 TradeMarkerConstants.RagfairRestrictedTraderRoute,
-                static (url, info, sessionId, output) => HandleRagfairRestrictedTraderRoute()
+                static (url, info, sessionId, output, cancellationToken) => HandleRagfairRestrictedTraderRoute()
             ),
             new RouteAction<SetLanguageRequest>(
                 TradeMarkerConstants.LanguageRoute,
-                static (url, info, sessionId, output) => HandleLanguageRoute(info, sessionId)
+                static (url, info, sessionId, output, cancellationToken) => HandleLanguageRoute(info, sessionId)
             ),
         ];
     }
