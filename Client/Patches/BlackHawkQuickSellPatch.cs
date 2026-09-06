@@ -1,6 +1,7 @@
 #if SPT_CLIENT
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Comfort.Common;
 using HarmonyLib;
 
@@ -10,6 +11,11 @@ namespace MoeTradeMarker.Client.Patches;
 internal static class BlackHawkQuickSellMenuAvailabilityPatch
 {
     private const string FleaInteractionName = "QuickSell (Flea)";
+    private static readonly ConditionalWeakTable<object, RestrictedButtonMarker> RestrictedButtons = new();
+
+    private sealed class RestrictedButtonMarker
+    {
+    }
 
     private static IEnumerable<MethodBase> TargetMethods()
     {
@@ -30,15 +36,46 @@ internal static class BlackHawkQuickSellMenuAvailabilityPatch
 
     private static void Postfix(object __instance, object[] __args)
     {
+        RestrictedButtons.Remove(__instance);
+
         if (__args.Length == 0
-            || !string.Equals(__args[0]?.ToString(), FleaInteractionName, StringComparison.Ordinal)
+            || !string.Equals(__args[0]?.ToString(), FleaInteractionName, StringComparison.OrdinalIgnoreCase)
             || !TradeMarkerItemRestriction.ContainsRagfairRestrictedItem(BlackHawkQuickSellContextPatch.CurrentItem))
         {
             return;
         }
 
-        AccessTools.Method(__instance.GetType(), "SetButtonInteraction")
-            ?.Invoke(__instance, [new FailedResult(string.Empty)]);
+        RestrictedButtons.Add(__instance, new RestrictedButtonMarker());
+    }
+
+    internal static bool IsRestrictedButton(object button)
+    {
+        return RestrictedButtons.TryGetValue(button, out _);
+    }
+}
+
+[HarmonyPatch]
+internal static class BlackHawkQuickSellButtonInteractionPatch
+{
+    private static IEnumerable<MethodBase> TargetMethods()
+    {
+        var buttonType = AccessTools.TypeByName("EFT.UI.SimpleContextMenuButton");
+        var setInteractionMethod = buttonType is null
+            ? null
+            : AccessTools.Method(buttonType, "SetButtonInteraction");
+
+        if (setInteractionMethod is not null)
+        {
+            yield return setInteractionMethod;
+        }
+    }
+
+    private static void Prefix(object __instance, ref IResult __0)
+    {
+        if (BlackHawkQuickSellMenuAvailabilityPatch.IsRestrictedButton(__instance))
+        {
+            __0 = new FailedResult(string.Empty);
+        }
     }
 }
 

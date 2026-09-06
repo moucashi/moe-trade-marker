@@ -7,7 +7,7 @@ using MoeTradeMarker.Shared;
 
 namespace MoeTradeMarker.Client;
 
-[BepInPlugin(TradeMarkerConstants.ClientGuid, TradeMarkerConstants.ModName, "1.2.1")]
+[BepInPlugin(TradeMarkerConstants.ClientGuid, TradeMarkerConstants.ModName, "1.2.2")]
 [BepInDependency("com.blackhawk.quicksell", BepInDependency.DependencyFlags.SoftDependency)]
 public sealed class Plugin : BaseUnityPlugin
 {
