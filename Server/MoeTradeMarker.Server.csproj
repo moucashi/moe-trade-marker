@@ -7,7 +7,7 @@
     <Nullable>enable</Nullable>
     <OutputType>Library</OutputType>
     <Version>1.2.1</Version>
-    <OutputPath>..\dist\SPT\user\mods\Moe-TradeMarker\</OutputPath>
+    <OutputPath>..\dist\SPT_Runtime\user\mods\Moe-TradeMarker\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>

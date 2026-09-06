@@ -52,8 +52,8 @@
       <MoeTradeMarkerPackageFiles Include="$(MoeTradeMarkerDistDirectory)BepInEx\**\*.*">
         <PackageRoot>BepInEx</PackageRoot>
       </MoeTradeMarkerPackageFiles>
-      <MoeTradeMarkerPackageFiles Include="$(MoeTradeMarkerDistDirectory)SPT\**\*.*">
-        <PackageRoot>SPT</PackageRoot>
+      <MoeTradeMarkerPackageFiles Include="$(MoeTradeMarkerDistDirectory)SPT_Runtime\**\*.*">
+        <PackageRoot>SPT_Runtime</PackageRoot>
       </MoeTradeMarkerPackageFiles>
     </ItemGroup>
     <RemoveDir Directories="$(MoeTradeMarkerPackageStagingDirectory)" />
