@@ -1,131 +1,78 @@
 #if SPT_CLIENT
-using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Comfort.Common;
+using EFT.InventoryLogic;
+using EFT.UI;
 using HarmonyLib;
 
 namespace MoeTradeMarker.Client.Patches;
 
-[HarmonyPatch]
-internal static class BlackHawkQuickSellMenuAvailabilityPatch
+internal static class BlackHawkQuickSellInteractions
 {
-    private const string FleaInteractionName = "QuickSell (Flea)";
-    private static readonly ConditionalWeakTable<object, RestrictedButtonMarker> RestrictedButtons = new();
+    // QuickSell's dictionary key identifies the interaction independently of its displayed caption.
+    internal const string FleaKey = "QuickSell (Flea)";
+    internal static readonly ConditionalWeakTable<DynamicContextInteraction, Item> Items = new();
 
-    private sealed class RestrictedButtonMarker
+    internal static MethodBase? FindMethod(string name)
     {
-    }
-
-    private static IEnumerable<MethodBase> TargetMethods()
-    {
-        var buttonType = AccessTools.TypeByName("EFT.UI.SimpleContextMenuButton");
-        if (buttonType is null)
-        {
-            yield break;
-        }
-
-        foreach (var method in buttonType.GetMethods(BindingFlags.Instance | BindingFlags.Public))
-        {
-            if (method.Name == "Show" && method.GetParameters().FirstOrDefault()?.ParameterType == typeof(string))
-            {
-                yield return method;
-            }
-        }
-    }
-
-    private static void Postfix(object __instance, object[] __args)
-    {
-        RestrictedButtons.Remove(__instance);
-
-        if (__args.Length == 0
-            || !string.Equals(__args[0]?.ToString(), FleaInteractionName, StringComparison.OrdinalIgnoreCase)
-            || !TradeMarkerItemRestriction.ContainsRagfairRestrictedItem(BlackHawkQuickSellContextPatch.CurrentItem))
-        {
-            return;
-        }
-
-        RestrictedButtons.Add(__instance, new RestrictedButtonMarker());
-    }
-
-    internal static bool IsRestrictedButton(object button)
-    {
-        return RestrictedButtons.TryGetValue(button, out _);
+        var type = AccessTools.TypeByName("QuickSell.Patches.ContextMenuPatch");
+        return type is null ? null : AccessTools.Method(type, name);
     }
 }
 
-[HarmonyPatch]
-internal static class BlackHawkQuickSellButtonInteractionPatch
+[HarmonyPatch(typeof(InteractionButtonsContainer), nameof(InteractionButtonsContainer.CreateDynamicContextButton))]
+internal static class BlackHawkQuickSellMenuAvailabilityPatch
 {
-    private static IEnumerable<MethodBase> TargetMethods()
+    private static bool Prefix(InteractionButtonsContainer __instance, DynamicContextInteraction interaction)
     {
-        var buttonType = AccessTools.TypeByName("EFT.UI.SimpleContextMenuButton");
-        var setInteractionMethod = buttonType is null
-            ? null
-            : AccessTools.Method(buttonType, "SetButtonInteraction");
-
-        if (setInteractionMethod is not null)
+        if (!BlackHawkQuickSellInteractions.Items.TryGetValue(interaction, out var item))
         {
-            yield return setInteractionMethod;
+            return true;
         }
-    }
 
-    private static void Prefix(object __instance, ref IResult __0)
-    {
-        if (BlackHawkQuickSellMenuAvailabilityPatch.IsRestrictedButton(__instance))
-        {
-            __0 = new FailedResult(string.Empty);
-        }
+        // Preserve the game's dynamic-button lifecycle, supplying availability before binding.
+        var button = __instance.CreateContextButton(
+            interaction.Key, interaction.Key, __instance._buttonTemplate, __instance._buttonsContainer,
+            interaction.Icon, interaction.Execute, __instance.CloseSubMenu);
+        IResult availability = TradeMarkerItemRestriction.ContainsRagfairRestrictedItem(item)
+            ? new FailedResult(string.Empty)
+            : SuccessfulResult.New;
+        button.SetButtonInteraction(availability);
+        __instance.BindButton(button);
+        return false;
     }
 }
 
 [HarmonyPatch]
 internal static class BlackHawkQuickSellContextPatch
 {
-    public static object? CurrentItem { get; private set; }
+    private static MethodBase? TargetMethod() =>
+        BlackHawkQuickSellInteractions.FindMethod("AddQuickSellEntries");
 
-    private static IEnumerable<MethodBase> TargetMethods()
+    private static bool Prepare() => TargetMethod() is not null;
+
+    private static void Postfix(ContextInteractions<EItemInfoButton> __0, Item __1)
     {
-        var contextMenuPatchType = AccessTools.TypeByName("QuickSell.Patches.ContextMenuPatch");
-        if (contextMenuPatchType is null)
+        if (__1 is null || !__0._dynamicInteractions.TryGetValue(BlackHawkQuickSellInteractions.FleaKey, out var interaction))
         {
-            yield break;
+            return;
         }
 
-        var addEntriesMethod = AccessTools.Method(contextMenuPatchType, "AddQuickSellEntries");
-        if (addEntriesMethod is not null)
-        {
-            yield return addEntriesMethod;
-        }
-    }
-
-    private static void Prefix(object __1)
-    {
-        CurrentItem = __1;
+        BlackHawkQuickSellInteractions.Items.Remove(interaction);
+        BlackHawkQuickSellInteractions.Items.Add(interaction, __1);
     }
 }
 
 [HarmonyPatch]
 internal static class BlackHawkQuickSellExecutionPatch
 {
-    private const string ContextMenuPatchTypeName = "QuickSell.Patches.ContextMenuPatch";
+    private static MethodBase? TargetMethod() =>
+        BlackHawkQuickSellInteractions.FindMethod("SellToFlea");
 
-    private static IEnumerable<MethodBase> TargetMethods()
-    {
-        var contextMenuPatchType = AccessTools.TypeByName(ContextMenuPatchTypeName);
-        if (contextMenuPatchType is null)
-        {
-            yield break;
-        }
+    private static bool Prepare() => TargetMethod() is not null;
 
-        var sellToFleaMethod = AccessTools.Method(contextMenuPatchType, "SellToFlea");
-        if (sellToFleaMethod is not null)
-        {
-            yield return sellToFleaMethod;
-        }
-    }
-
-    private static bool Prefix(object __0)
+    private static bool Prefix(Item __0)
     {
         return !TradeMarkerItemRestriction.ContainsRagfairRestrictedItem(__0);
     }

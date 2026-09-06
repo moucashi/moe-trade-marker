@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputType>Library</OutputType>
-    <Version>1.2.2</Version>
+    <Version>1.2.3</Version>
     <OutputPath>..\dist\BepInEx\plugins\Moe-TradeMarker\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
@@ -35,6 +35,10 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(UseSptClientReferences)' == 'true'">
+    <Reference Include="Sirenix.Serialization">
+      <HintPath>$(SPTManagedPath)\Sirenix.Serialization.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="0Harmony">
       <HintPath>$(SPTBepInExCorePath)\0Harmony.dll</HintPath>
       <Private>false</Private>
