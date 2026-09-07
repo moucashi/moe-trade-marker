@@ -6,8 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputType>Library</OutputType>
-    <Version>1.2.3</Version>
-    <OutputPath>..\dist\BepInEx\plugins\Moe-TradeMarker\</OutputPath>
+    <Version>1.2.4</Version>
+    <OutputPath>$(MoeTradeMarkerOutputRoot)BepInEx/plugins/Moe-TradeMarker/</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
@@ -35,6 +35,14 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(UseSptClientReferences)' == 'true'">
+    <Reference Include="spt-common">
+      <HintPath>$(SPTPath)\BepInEx\plugins\spt\spt-common.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(SPTManagedPath)\Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Sirenix.Serialization">
       <HintPath>$(SPTManagedPath)\Sirenix.Serialization.dll</HintPath>
       <Private>false</Private>

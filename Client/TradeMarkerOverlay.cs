@@ -1,7 +1,4 @@
 #if SPT_CLIENT
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using MoeTradeMarker.Shared;
 using UnityEngine;
@@ -11,129 +8,71 @@ namespace MoeTradeMarker.Client;
 
 internal static class TradeMarkerOverlay
 {
-    private static readonly List<WeakReference<Image>> ActiveMarkers = [];
+    private static readonly List<WeakReference<Image>> ActiveMarkers = new();
     private static readonly ConditionalWeakTable<Image, object> TrackedMarkers = new();
     private static readonly object TrackedMarker = new();
     private static Sprite? iconSprite;
 
     public static void ShowOnItemView(Component itemView, string overlayName, MarkerPosition position, Color color)
     {
-        var overlay = GetOrCreateOverlay(itemView, overlayName);
+        if (itemView == null) return;
+        var child = itemView.transform.Find(overlayName);
+        var overlay = child != null ? child.GetComponent<Image>() : null;
+        if (overlay == null)
+        {
+            var go = new GameObject(overlayName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(itemView.transform, false);
+            go.transform.SetAsLastSibling();
+            overlay = go.GetComponent<Image>();
+        }
         overlay.color = color;
-        iconSprite ??= CreateMarkerSprite();
+        if (iconSprite == null) iconSprite = CreateMarkerSprite();
         overlay.sprite = iconSprite;
         overlay.raycastTarget = false;
-
         Position(overlay.rectTransform, position);
-        TrackMarker(overlay);
-
+        if (!TrackedMarkers.TryGetValue(overlay, out _))
+        {
+            TrackedMarkers.Add(overlay, TrackedMarker);
+            ActiveMarkers.Add(new WeakReference<Image>(overlay));
+        }
         overlay.gameObject.SetActive(true);
     }
 
-    public static void HideFromItemView(object itemView, string overlayName)
+    public static void HideFromItemView(Component itemView, string overlayName)
     {
-        var child = (itemView as Component)?.transform.Find(overlayName);
-        if (child is not null)
-        {
-            child.gameObject.SetActive(false);
-        }
+        if (itemView == null) return;
+        var child = itemView.transform.Find(overlayName);
+        if (child != null) child.gameObject.SetActive(false);
     }
 
     public static void ApplyCurrentConfigToVisibleMarkers()
     {
-        ActiveMarkers.RemoveAll(reference => !reference.TryGetTarget(out var image) || image is null);
+        ActiveMarkers.RemoveAll(reference => !reference.TryGetTarget(out var image) || image == null);
         foreach (var reference in ActiveMarkers)
         {
-            if (!reference.TryGetTarget(out var marker) || marker is null)
-            {
-                continue;
-            }
-
+            if (!reference.TryGetTarget(out var marker) || marker == null) continue;
             marker.color = TradeMarkerClientConfig.MarkerColor;
             Position(marker.rectTransform, TradeMarkerClientConfig.MarkerPosition);
         }
     }
 
-    public static void ApplyVisibilityToVisibleMarkers()
+    public static void Clear()
     {
-        ActiveMarkers.RemoveAll(reference => !reference.TryGetTarget(out var image) || image is null);
         foreach (var reference in ActiveMarkers)
         {
-            if (reference.TryGetTarget(out var marker) && marker is not null)
+            if (reference.TryGetTarget(out var marker) && marker != null)
             {
-                marker.gameObject.SetActive(TradeMarkerClientConfig.ShowTraderMarker);
+                TrackedMarkers.Remove(marker);
+                UnityEngine.Object.Destroy(marker.gameObject);
             }
         }
-    }
-
-    public static void Hide(object instance, string overlayName)
-    {
-        var component = instance as Component;
-        var child = component?.transform.Find(overlayName);
-        if (child is not null)
+        ActiveMarkers.Clear();
+        if (iconSprite != null)
         {
-            child.gameObject.SetActive(false);
+            UnityEngine.Object.Destroy(iconSprite.texture);
+            UnityEngine.Object.Destroy(iconSprite);
+            iconSprite = null;
         }
-    }
-
-    public static Image? FindIconImage(object instance)
-    {
-        foreach (var fieldName in new[] { "_questIconImage", "questIconImage", "QuestIconImage", "____questIconImage" })
-        {
-            var field = AccessField(instance.GetType(), fieldName);
-            if (field?.GetValue(instance) is Image image)
-            {
-                return image;
-            }
-        }
-
-        return (instance as Component)?.GetComponentsInChildren<Image>(true)
-            .FirstOrDefault(image => image.gameObject.name != "MoeTradeMarkerIcon");
-    }
-
-    public static object? FindTooltip(object instance, object[] args)
-    {
-        var fromArgs = args.FirstOrDefault(arg => Contains(arg?.GetType().Name, "Tooltip", StringComparison.OrdinalIgnoreCase));
-        if (fromArgs is not null)
-        {
-            return fromArgs;
-        }
-
-        var type = instance.GetType();
-        foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
-        {
-            if (Contains(field.FieldType.Name, "Tooltip", StringComparison.OrdinalIgnoreCase))
-            {
-                return field.GetValue(instance);
-            }
-        }
-
-        return null;
-    }
-
-    private static Image GetOrCreateOverlay(Component parent, string overlayName)
-    {
-        var existing = parent.transform.Find(overlayName)?.GetComponent<Image>();
-        if (existing is not null)
-        {
-            return existing;
-        }
-
-        var gameObject = new GameObject(overlayName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        gameObject.transform.SetParent(parent.transform, worldPositionStays: false);
-        gameObject.transform.SetAsLastSibling();
-        return gameObject.GetComponent<Image>();
-    }
-
-    private static void TrackMarker(Image marker)
-    {
-        if (TrackedMarkers.TryGetValue(marker, out _))
-        {
-            return;
-        }
-
-        TrackedMarkers.Add(marker, TrackedMarker);
-        ActiveMarkers.Add(new WeakReference<Image>(marker));
     }
 
     private static void Position(RectTransform rectTransform, MarkerPosition position)
@@ -189,14 +128,5 @@ internal static class TradeMarkerOverlay
         return Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
     }
 
-    private static FieldInfo? AccessField(Type type, string fieldName)
-    {
-        return type.GetField(fieldName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-    }
-
-    private static bool Contains(string? value, string part, StringComparison comparison)
-    {
-        return value?.IndexOf(part, comparison) >= 0;
-    }
 }
 #endif

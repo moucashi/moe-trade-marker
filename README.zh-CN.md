@@ -2,7 +2,7 @@
 
 [English README](README.md)
 
-[Forge 主页](https://forge.sp-tarkov.com/mod/2736/moe-trademarker)
+[Forge 主页](https://sp-mod.com/mod/2736/moe-trademarker)
 [ODDBA 帖子](https://sns.oddba.cn/?p=190592)
 
 Moe-TradeMarker 的目标很简单：让你一眼看出哪些物品是从 NPC 商人那里买来的。购买后的物品会在客户端显示小型商人角标，你可以更轻松地区分商人货、战局掉落和其他来源的物品。默认情况下，它还可以阻止带有商人标记的物品上架跳蚤市场，帮助你在 SPT 存档中更稳定地执行“商人货不可转卖”的规则。
@@ -23,13 +23,13 @@ Moe-TradeMarker 的目标很简单：让你一眼看出哪些物品是从 NPC �
 下载最新版本压缩包，并解压到 SPT 根目录。压缩包包含：
 
 `BepInEx/plugins/Moe-TradeMarker/`
-`SPT/user/mods/Moe-TradeMarker/`
+`SPT_Runtime/user/mods/Moe-TradeMarker/`
 
 如果 F12 的 `plugin / mod settings` 中没有看到 Moe-TradeMarker，通常表示安装到 BepInEx 的客户端 DLL 不是带有 `[BepInPlugin]` 的真实插件，或 DLL 没有放在 `BepInEx/plugins/Moe-TradeMarker/` 下。
 
 ## 配置
 
-安装后的服务端配置位于 `SPT/user/mods/Moe-TradeMarker/config.json`。
+安装后的服务端配置位于 `SPT_Runtime/user/mods/Moe-TradeMarker/config.json`。
 
 客户端显示选项可在 BepInEx 配置菜单中调整：
 
@@ -46,10 +46,13 @@ Moe-TradeMarker 的目标很简单：让你一眼看出哪些物品是从 NPC �
 
 ## 构建
 
-服务端项目面向 .NET 10，并依赖 SPTushonka NuGet 包 `4.1.5`。
-
-客户端项目默认使用 NuGet 参考程序集构建真实 BepInEx 插件。也可以设置 `SPTPath` 指向 SPT 安装目录，让构建优先引用本地 SPT 客户端程序集：
+安装 .NET 10 SDK，可与其他 SDK 并行使用。服务端使用 SPTushonka 4.1.5 依赖；客户端必须引用安装目录中的 SPT 4.1.5 / EFT 0.16.9.5.40743 实际程序集、BepInEx core、spt-common 和 Newtonsoft.Json。
 
 ```powershell
-dotnet build .\MoeTradeMarker.sln -p:SPTPath=C:\SPT
+dotnet build .\MoeTradeMarker.sln -c Release -p:SPTPath=C:\SPT
+.\Package.ps1 -SPTPath C:\SPT
 ```
+
+普通构建不再自动生成 ZIP。Package.ps1 会在隔离目录重新构建、执行全部测试、校验程序集与插件版本，成功后生成 dist/Moe-TradeMarker-<版本>.zip；构建或测试失败不会覆盖现有压缩包。
+
+语言选项使用各语言自称，原有 Chinese 等枚举配置值仍然兼容。配置名称随所选语言更新，Auto 跟随当前游戏语言。

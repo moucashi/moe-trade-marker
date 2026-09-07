@@ -1,5 +1,6 @@
 <Project>
   <PropertyGroup>
+    <MoeTradeMarkerOutputRoot Condition="'$(MoeTradeMarkerOutputRoot)' == ''">$(MSBuildThisFileDirectory)dist/</MoeTradeMarkerOutputRoot>
     <LangVersion>latest</LangVersion>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <Nullable>enable</Nullable>

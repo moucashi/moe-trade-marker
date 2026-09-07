@@ -1,84 +1,29 @@
 #if SPT_CLIENT
-using System;
-using System.Collections;
+using EFT.InventoryLogic;
 using HarmonyLib;
 
 namespace MoeTradeMarker.Client;
 
 internal static class TradeMarkerItemRestriction
 {
-    public static bool ContainsRagfairRestrictedItem(object? item)
+    public static bool ContainsRagfairRestrictedItem(object? value)
     {
-        if (item is null)
+        if (value is not Item item) return false;
+        if (TradeMarkerDataLoader.IsItemRestrictedFromRagfair(item.Id.ToString())) return true;
+        foreach (var child in item.GetAllVisibleItems())
         {
-            return false;
-        }
-
-        foreach (var current in EnumerateItemAndChildren(item))
-        {
-            var itemId = GetItemId(current);
-            if (TradeMarkerDataLoader.IsItemRestrictedFromRagfair(itemId))
-            {
+            if (!ReferenceEquals(child, item) && TradeMarkerDataLoader.IsItemRestrictedFromRagfair(child.Id.ToString()))
                 return true;
-            }
         }
-
         return false;
     }
 
+    // Optional third-party trade wrappers still require member discovery.
     public static object? GetFieldOrPropertyValue(object instance, string name)
     {
-        for (var type = instance.GetType(); type is not null; type = type.BaseType)
-        {
-            var field = AccessTools.Field(type, name);
-            if (field is not null)
-            {
-                return field.GetValue(instance);
-            }
-
-            var property = AccessTools.Property(type, name);
-            if (property is not null)
-            {
-                return property.GetValue(instance);
-            }
-        }
-
-        return null;
-    }
-
-    private static IEnumerable EnumerateItemAndChildren(object item)
-    {
-        yield return item;
-
-        foreach (var child in GetVisibleChildren(item))
-        {
-            yield return child;
-        }
-    }
-
-    private static IEnumerable GetVisibleChildren(object item)
-    {
-        var method = AccessTools.Method(item.GetType(), "GetAllVisibleItems", Type.EmptyTypes);
-        if (method?.Invoke(item, []) is not IEnumerable children)
-        {
-            yield break;
-        }
-
-        foreach (var child in children)
-        {
-            if (child is not null && !ReferenceEquals(child, item))
-            {
-                yield return child;
-            }
-        }
-    }
-
-    private static string GetItemId(object item)
-    {
-        var value = GetFieldOrPropertyValue(item, "Id")
-            ?? GetFieldOrPropertyValue(item, "_id");
-
-        return value?.ToString() ?? string.Empty;
+        var type = instance.GetType();
+        var field = AccessTools.Field(type, name);
+        return field is not null ? field.GetValue(instance) : AccessTools.Property(type, name)?.GetValue(instance);
     }
 }
 #endif

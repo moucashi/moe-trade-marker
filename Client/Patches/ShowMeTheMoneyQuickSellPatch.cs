@@ -10,22 +10,18 @@ namespace MoeTradeMarker.Client.Patches;
 [HarmonyPatch]
 internal static class ShowMeTheMoneyQuickSellPatch
 {
-    private const string BrokerServiceTypeName = "SwiftXP.SPT.ShowMeTheMoney.QuickSell.Client.Services.BrokerService";
+    private static readonly MethodBase? Target = FindTarget();
 
-    private static IEnumerable<MethodBase> TargetMethods()
+    private static MethodBase? FindTarget()
     {
-        var brokerServiceType = AccessTools.TypeByName(BrokerServiceTypeName);
-        if (brokerServiceType is null)
-        {
-            yield break;
-        }
-
-        var sellItemsOnFleaMethod = AccessTools.Method(brokerServiceType, "SellItemsOnFlea");
-        if (sellItemsOnFleaMethod is not null)
-        {
-            yield return sellItemsOnFleaMethod;
-        }
+        var type = AppDomain.CurrentDomain.GetAssemblies()
+            .Select(assembly => assembly.GetType("SwiftXP.SPT.ShowMeTheMoney.QuickSell.Client.Services.BrokerService"))
+            .FirstOrDefault(candidate => candidate is not null);
+        return type is null ? null : AccessTools.Method(type, "SellItemsOnFlea");
     }
+
+    private static bool Prepare() => Target is not null;
+    private static MethodBase? TargetMethod() => Target;
 
     private static bool Prefix(object[] __args)
     {
@@ -67,22 +63,18 @@ internal static class ShowMeTheMoneyQuickSellPatch
 [HarmonyPatch]
 internal static class ShowMeTheMoneyQuickSellFleaTradeBuilderPatch
 {
-    private const string BrokerServiceTypeName = "SwiftXP.SPT.ShowMeTheMoney.QuickSell.Client.Services.BrokerService";
+    private static readonly MethodBase? Target = FindTarget();
 
-    private static IEnumerable<MethodBase> TargetMethods()
+    private static MethodBase? FindTarget()
     {
-        var brokerServiceType = AccessTools.TypeByName(BrokerServiceTypeName);
-        if (brokerServiceType is null)
-        {
-            yield break;
-        }
-
-        var getBrokerFleaTradesMethod = AccessTools.Method(brokerServiceType, "GetBrokerFleaTrades");
-        if (getBrokerFleaTradesMethod is not null)
-        {
-            yield return getBrokerFleaTradesMethod;
-        }
+        var type = AppDomain.CurrentDomain.GetAssemblies()
+            .Select(assembly => assembly.GetType("SwiftXP.SPT.ShowMeTheMoney.QuickSell.Client.Services.BrokerService"))
+            .FirstOrDefault(candidate => candidate is not null);
+        return type is null ? null : AccessTools.Method(type, "GetBrokerFleaTrades");
     }
+
+    private static bool Prepare() => Target is not null;
+    private static MethodBase? TargetMethod() => Target;
 
     private static void Postfix(object[] __args, object __result)
     {

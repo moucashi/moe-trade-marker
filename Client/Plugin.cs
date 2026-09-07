@@ -7,8 +7,9 @@ using MoeTradeMarker.Shared;
 
 namespace MoeTradeMarker.Client;
 
-[BepInPlugin(TradeMarkerConstants.ClientGuid, TradeMarkerConstants.ModName, "1.2.3")]
+[BepInPlugin(TradeMarkerConstants.ClientGuid, TradeMarkerConstants.ModName, "1.2.4")]
 [BepInDependency("com.blackhawk.quicksell", BepInDependency.DependencyFlags.SoftDependency)]
+[BepInDependency("com.swiftxp.spt.showmethemoney.quicksell", BepInDependency.DependencyFlags.SoftDependency)]
 public sealed class Plugin : BaseUnityPlugin
 {
     private Harmony? harmony;
@@ -18,15 +19,15 @@ public sealed class Plugin : BaseUnityPlugin
     private void Awake()
     {
         Log = Logger;
-        TradeMarkerLocalization.Initialize();
         TradeMarkerClientConfig.Bind(Config);
-        TradeMarkerLocalization.Refresh();
+        TradeMarkerDataLoader.Start();
+        TradeMarkerDataLoader.QueueLanguage(TradeMarkerLocalization.LanguageCode);
 
         try
         {
             harmony = new Harmony(TradeMarkerConstants.ClientGuid);
             InstallPatches(harmony);
-            TradeMarkerDataLoader.RequestRefresh(force: true);
+            TradeMarkerDataLoader.RequestRefresh();
         }
         catch (Exception exception)
         {
@@ -56,6 +57,8 @@ public sealed class Plugin : BaseUnityPlugin
 
     private void Update()
     {
+        TradeMarkerClientConfig.Tick();
+        TradeMarkerDataLoader.Tick();
         if (TradeMarkerDataLoader.ConsumeRefreshCompleted())
         {
             ItemViewTradeMarkerPatch.RefreshTrackedItemViews();
@@ -64,6 +67,9 @@ public sealed class Plugin : BaseUnityPlugin
 
     private void OnDestroy()
     {
+        TradeMarkerDataLoader.Stop();
+        ItemViewTradeMarkerPatch.Clear();
+        TradeMarkerOverlay.Clear();
         harmony?.UnpatchSelf();
         harmony = null;
     }

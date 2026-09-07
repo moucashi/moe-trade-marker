@@ -1,334 +1,160 @@
 #if SPT_CLIENT
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading;
+using System.Diagnostics;
 using System.Threading.Tasks;
+using MoeTradeMarker.Client.Data;
 using MoeTradeMarker.Shared;
+using Newtonsoft.Json;
+using SPT.Common.Http;
 
 namespace MoeTradeMarker.Client;
 
 internal static class TradeMarkerDataLoader
 {
-    private static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(5);
-    private static readonly object SyncRoot = new();
-    private static DateTime lastRefreshUtc = DateTime.MinValue;
-    private static int refreshInProgress;
-    private static int refreshCompletedPending;
-    private static string? lastLoggedLanguageCode;
-    private static Dictionary<string, string> traderNames = new(StringComparer.OrdinalIgnoreCase);
-    private static Dictionary<string, string> itemMarkers = new(StringComparer.OrdinalIgnoreCase);
-    private static HashSet<string> ragfairRestrictedTraderIds = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly object Gate = new();
+    private static readonly Stopwatch Clock = Stopwatch.StartNew();
+    private static RefreshSchedule schedule = new(5);
+    private static MarkerSnapshot snapshot = MarkerSnapshot.Empty;
+    private static bool completed;
+    private static bool stopped;
+    private static int generation;
+    private static string? pendingLanguage;
+    private static string? syncedLanguage;
 
-    public static bool TryGetTraderNameForItem(string itemId, out string traderName)
+    public static void Start()
     {
-        traderName = string.Empty;
-        if (string.IsNullOrWhiteSpace(itemId))
+        lock (Gate)
         {
-            return false;
+            generation++;
+            stopped = false;
+            completed = false;
+            snapshot = MarkerSnapshot.Empty;
+            schedule = new RefreshSchedule(5);
+            pendingLanguage = null;
+            syncedLanguage = null;
+            schedule.Request();
         }
+    }
 
-        RequestRefresh(force: false);
-        return TryGetTraderNameFromCache(itemId, out traderName);
+    public static void Stop()
+    {
+        lock (Gate)
+        {
+            stopped = true;
+            generation++;
+            completed = false;
+            schedule.Stop();
+        }
+    }
+
+    public static bool TryGetTraderNameForItem(string itemId, out string traderName, bool requestRefresh = true)
+    {
+        lock (Gate)
+        {
+            if (requestRefresh) schedule.Request();
+            return snapshot.TryGetTraderName(itemId, out traderName);
+        }
     }
 
     public static bool IsItemRestrictedFromRagfair(string itemId)
     {
-        if (string.IsNullOrWhiteSpace(itemId))
+        lock (Gate)
         {
-            return false;
-        }
-
-        RequestRefresh(force: false);
-        return IsItemRestrictedFromRagfairCache(itemId);
-    }
-
-    private static bool TryGetTraderNameFromCache(string itemId, out string traderName)
-    {
-        traderName = string.Empty;
-        lock (SyncRoot)
-        {
-            if (!itemMarkers.TryGetValue(itemId, out var traderId) || string.IsNullOrWhiteSpace(traderId))
-            {
-                return false;
-            }
-
-            traderName = traderNames.TryGetValue(traderId, out var name) && !string.IsNullOrWhiteSpace(name)
-                ? name
-                : traderId;
-            return true;
+            schedule.Request();
+            return snapshot.IsRestricted(itemId);
         }
     }
 
-    private static bool IsItemRestrictedFromRagfairCache(string itemId)
+    public static void RequestRefresh()
     {
-        lock (SyncRoot)
+        lock (Gate) schedule.Request();
+    }
+
+    public static void QueueLanguage(string language)
+    {
+        lock (Gate)
         {
-            return itemMarkers.TryGetValue(itemId, out var traderId)
-                && !string.IsNullOrWhiteSpace(traderId)
-                && ragfairRestrictedTraderIds.Contains(traderId);
+            if (stopped || (language == syncedLanguage && pendingLanguage is null)) return;
+            pendingLanguage = language;
+            schedule.Request();
         }
     }
 
-    public static void RequestRefresh(bool force)
+    public static void Tick()
     {
-        var now = DateTime.UtcNow;
-        lock (SyncRoot)
+        lock (Gate)
         {
-            if (!force && now - lastRefreshUtc < RefreshInterval)
-            {
-                return;
-            }
-
-            lastRefreshUtc = now;
+            if (!schedule.TryStart(Clock.Elapsed.TotalSeconds)) return;
+            var currentGeneration = generation;
+            var language = pendingLanguage;
+            pendingLanguage = null;
+            Task.Run(() => RefreshCore(currentGeneration, language));
         }
-
-        if (Interlocked.CompareExchange(ref refreshInProgress, 1, 0) != 0)
-        {
-            return;
-        }
-
-        Task.Run(RefreshCore);
     }
 
     public static bool ConsumeRefreshCompleted()
     {
-        return Interlocked.Exchange(ref refreshCompletedPending, 0) != 0;
+        lock (Gate)
+        {
+            var result = completed;
+            completed = false;
+            return result;
+        }
     }
 
-    private static void RefreshCore()
+    private static void RefreshCore(int currentGeneration, string? language)
     {
+        var success = false;
         try
         {
-            var loadedTraderNames = GetDictionary(TradeMarkerConstants.TraderInfoRoute);
-            var loadedItemMarkers = GetDictionary(TradeMarkerConstants.ItemMarkerRoute);
-            var loadedRestrictedTraderIds = GetStringSet(TradeMarkerConstants.RagfairRestrictedTraderRoute);
-
-            lock (SyncRoot)
+            if (language is not null)
             {
-                if (loadedTraderNames is not null)
+                try
                 {
-                    traderNames = loadedTraderNames;
+                    RequestHandler.PostJson(TradeMarkerConstants.LanguageRoute, JsonConvert.SerializeObject(new { language }));
+                    lock (Gate)
+                    {
+                        if (stopped || generation != currentGeneration) return;
+                        syncedLanguage = language;
+                    }
                 }
-
-                if (loadedItemMarkers is not null)
+                catch (Exception exception)
                 {
-                    itemMarkers = loadedItemMarkers;
-                }
-
-                if (loadedRestrictedTraderIds is not null)
-                {
-                    ragfairRestrictedTraderIds = loadedRestrictedTraderIds;
+                    lock (Gate)
+                    {
+                        if (stopped || generation != currentGeneration) return;
+                        pendingLanguage ??= language;
+                        schedule.Request();
+                    }
+                    Plugin.Log.LogDebug($"Moe-TradeMarker language sync failed: {exception.Message}");
                 }
             }
 
-            Interlocked.Exchange(ref refreshCompletedPending, 1);
+            var loaded = MarkerSnapshot.Parse(
+                RequestHandler.GetJson(TradeMarkerConstants.TraderInfoRoute),
+                RequestHandler.GetJson(TradeMarkerConstants.ItemMarkerRoute),
+                RequestHandler.GetJson(TradeMarkerConstants.RagfairRestrictedTraderRoute));
+            lock (Gate)
+            {
+                if (stopped || generation != currentGeneration) return;
+                if (!snapshot.SameAs(loaded))
+                {
+                    snapshot = loaded;
+                    completed = true;
+                }
+                success = true;
+            }
         }
         catch (Exception exception)
         {
-            Plugin.Log.LogDebug(TradeMarkerLocalization.Format(TradeMarkerText.ClientMarkerRefreshFailed, exception.Message));
+            Plugin.Log.LogDebug($"Moe-TradeMarker marker refresh failed: {exception.Message}");
         }
         finally
         {
-            Interlocked.Exchange(ref refreshInProgress, 0);
-        }
-    }
-
-    public static void SyncLanguage()
-    {
-        try
-        {
-            TradeMarkerLocalization.Refresh();
-            PostLanguage();
-        }
-        catch (Exception exception)
-        {
-            Plugin.Log.LogDebug(TradeMarkerLocalization.Format(TradeMarkerText.ClientLanguageSyncFailed, exception.Message));
-        }
-    }
-
-    private static Dictionary<string, string>? GetDictionary(string route)
-    {
-        var json = GetJson(route);
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return null;
-        }
-
-        return ParseStringDictionary(json!);
-    }
-
-    private static HashSet<string>? GetStringSet(string route)
-    {
-        var json = GetJson(route);
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return null;
-        }
-
-        return ParseStringArray(json!);
-    }
-
-    private static string? GetJson(string route)
-    {
-        var requestHandler = GetRequestHandlerType();
-        var method = requestHandler?
-            .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .FirstOrDefault(info => info.Name == "GetJson" && info.GetParameters().Length == 1);
-
-        return method?.Invoke(null, new object[] { route })?.ToString();
-    }
-
-    private static void PostLanguage()
-    {
-        try
-        {
-            var requestHandler = GetRequestHandlerType();
-            var method = FindPostJsonMethod(requestHandler);
-
-            if (method is null)
+            lock (Gate)
             {
-                return;
-            }
-
-            var languageCode = TradeMarkerLocalization.LanguageCode;
-            var payload = $"{{\"language\":\"{languageCode}\"}}";
-            var parameters = method.GetParameters();
-            var args = new object?[parameters.Length];
-            args[0] = TradeMarkerConstants.LanguageRoute;
-            args[1] = payload;
-
-            for (var index = 2; index < parameters.Length; index++)
-            {
-                args[index] = parameters[index].HasDefaultValue ? parameters[index].DefaultValue : null;
-            }
-
-            method.Invoke(null, args);
-            LogLanguageSync(languageCode);
-        }
-        catch
-        {
-            // Language sync is best effort; marker data loading must keep working without it.
-        }
-    }
-
-    private static void LogLanguageSync(string languageCode)
-    {
-        if (string.Equals(lastLoggedLanguageCode, languageCode, StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        lastLoggedLanguageCode = languageCode;
-        Plugin.Log.LogInfo(TradeMarkerLocalization.Format(TradeMarkerText.ClientLanguageSynced, languageCode));
-    }
-
-    private static Type? GetRequestHandlerType()
-    {
-        return Type.GetType("SPT.Common.Http.RequestHandler, spt-common")
-            ?? AppDomain.CurrentDomain.GetAssemblies()
-                .Select(assembly => assembly.GetType("SPT.Common.Http.RequestHandler"))
-                .FirstOrDefault(type => type is not null);
-    }
-
-    private static MethodInfo? FindPostJsonMethod(Type? requestHandler)
-    {
-        if (requestHandler is null)
-        {
-            return null;
-        }
-
-        var candidates = requestHandler.GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Where(info => info.GetParameters().Length >= 2
-                && info.GetParameters()[0].ParameterType == typeof(string)
-                && info.GetParameters()[1].ParameterType == typeof(string));
-
-        return candidates.FirstOrDefault(info => info.Name == "PostJson")
-            ?? candidates.FirstOrDefault(info => info.Name == "Post")
-            ?? candidates.FirstOrDefault(info => info.Name == "PostJsonAsync");
-    }
-
-    private static Dictionary<string, string> ParseStringDictionary(string json)
-    {
-        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (Match match in Regex.Matches(json, "\"(?<key>(?:\\\\.|[^\"])*)\"\\s*:\\s*\"(?<value>(?:\\\\.|[^\"])*)\""))
-        {
-            result[DecodeJsonString(match.Groups["key"].Value)] = DecodeJsonString(match.Groups["value"].Value);
-        }
-
-        return result;
-    }
-
-    private static HashSet<string> ParseStringArray(string json)
-    {
-        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (Match match in Regex.Matches(json, "\"(?<value>(?:\\\\.|[^\"])*)\""))
-        {
-            var value = DecodeJsonString(match.Groups["value"].Value);
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                result.Add(value);
+                if (!stopped && generation == currentGeneration) schedule.Complete(success);
             }
         }
-
-        return result;
-    }
-
-    private static string DecodeJsonString(string value)
-    {
-        var builder = new StringBuilder(value.Length);
-        for (var index = 0; index < value.Length; index++)
-        {
-            var current = value[index];
-            if (current != '\\' || index + 1 >= value.Length)
-            {
-                builder.Append(current);
-                continue;
-            }
-
-            var escaped = value[++index];
-            switch (escaped)
-            {
-                case '"':
-                case '\\':
-                case '/':
-                    builder.Append(escaped);
-                    break;
-                case 'b':
-                    builder.Append('\b');
-                    break;
-                case 'f':
-                    builder.Append('\f');
-                    break;
-                case 'n':
-                    builder.Append('\n');
-                    break;
-                case 'r':
-                    builder.Append('\r');
-                    break;
-                case 't':
-                    builder.Append('\t');
-                    break;
-                case 'u' when index + 4 < value.Length && ushort.TryParse(
-                    value.Substring(index + 1, 4),
-                    System.Globalization.NumberStyles.HexNumber,
-                    System.Globalization.CultureInfo.InvariantCulture,
-                    out var code):
-                    builder.Append((char)code);
-                    index += 4;
-                    break;
-                default:
-                    builder.Append(escaped);
-                    break;
-            }
-        }
-
-        return builder.ToString();
     }
 }
 #endif
