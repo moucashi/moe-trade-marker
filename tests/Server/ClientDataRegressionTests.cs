@@ -15,6 +15,54 @@ public class ClientDataRegressionTests
     private const string Restricted = "[\"bbbbbbbbbbbbbbbbbbbbbbbb\"]";
 
     [Fact]
+    public void PurchaseIsImmediatelyVisibleAndRejectsOlderRefresh()
+    {
+        var cache = new MarkerCache();
+        cache.TryReplace(0, MarkerSnapshot.Parse(Names, "{}", Restricted), out _);
+        var beforePurchase = cache.Revision;
+        cache.Apply(new() { [ItemId] = TraderId });
+        Assert.True(cache.Snapshot.TryGetTraderName(ItemId, out _));
+        Assert.True(cache.Snapshot.IsRestricted(ItemId));
+        Assert.False(cache.TryReplace(beforePurchase, MarkerSnapshot.Empty, out var changed));
+        Assert.False(changed);
+        Assert.True(cache.Snapshot.TryGetTraderName(ItemId, out _));
+        Assert.True(cache.TryReplace(cache.Revision, MarkerSnapshot.Empty, out changed));
+        Assert.True(changed);
+        Assert.False(cache.Snapshot.TryGetTraderName(ItemId, out _));
+    }
+
+    [Theory]
+    [InlineData("{}", false)]
+    [InlineData("[]", false)]
+    [InlineData("null", false)]
+    [InlineData("{\"tradeMarker\":false}", false)]
+    [InlineData("{\"tradeMarker\":{\"traderId\":123}}", false)]
+    [InlineData("{\"tradeMarker\":{\"traderId\":\"invalid\"}}", false)]
+    [InlineData("{\"tradeMarker\":{\"traderId\":\"bbbbbbbbbbbbbbbbbbbbbbbb\"}}", true)]
+    public void PurchaseMarkerRequiresAuthoritativeValidData(string json, bool valid)
+    {
+        var token = Newtonsoft.Json.Linq.JToken.Parse(json);
+        Assert.Equal(valid, MarkerSnapshot.TryReadItemMarker(ItemId, token, out var trader));
+        if (valid) Assert.Equal(TraderId, trader);
+        Assert.False(MarkerSnapshot.TryReadItemMarker("bad", token, out _));
+    }
+
+    [Fact]
+    public void MultiplePurchasesSurviveStaleRefreshAndEmptyDelta()
+    {
+        var cache = new MarkerCache();
+        cache.Apply(new() { [ItemId] = TraderId });
+        var revision = cache.Revision;
+        const string second = "cccccccccccccccccccccccc";
+        cache.Apply(new() { [second] = TraderId });
+        cache.Apply(new());
+        Assert.Equal(revision + 1, cache.Revision);
+        Assert.False(cache.TryReplace(revision, MarkerSnapshot.Empty, out _));
+        Assert.True(cache.Snapshot.TryGetTraderName(ItemId, out _));
+        Assert.True(cache.Snapshot.TryGetTraderName(second, out _));
+    }
+
+    [Fact]
     public void ThrottledRequestRunsLaterWithoutAnotherRequest()
     {
         var schedule = new RefreshSchedule(5);

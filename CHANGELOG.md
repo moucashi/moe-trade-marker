@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.5
+
+### English
+
+- Apply server-provided purchase markers before new inventory items are displayed, without waiting for the background refresh or blocking the UI with network requests.
+- Prevent older in-flight refreshes from overwriting newly received purchase markers.
+
+### 中文
+
+- 在新购买物品显示前读取服务端返回的角标，无需等待后台刷新，也不通过网络请求阻塞界面。
+- 防止购买前启动的后台刷新覆盖刚收到的新物品角标。
+
 ## 1.2.4
 
 ### English

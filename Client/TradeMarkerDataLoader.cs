@@ -13,7 +13,7 @@ internal static class TradeMarkerDataLoader
     private static readonly object Gate = new();
     private static readonly Stopwatch Clock = Stopwatch.StartNew();
     private static RefreshSchedule schedule = new(5);
-    private static MarkerSnapshot snapshot = MarkerSnapshot.Empty;
+    private static MarkerCache cache = new();
     private static bool completed;
     private static bool stopped;
     private static int generation;
@@ -27,7 +27,7 @@ internal static class TradeMarkerDataLoader
             generation++;
             stopped = false;
             completed = false;
-            snapshot = MarkerSnapshot.Empty;
+            cache = new MarkerCache();
             schedule = new RefreshSchedule(5);
             pendingLanguage = null;
             syncedLanguage = null;
@@ -51,7 +51,7 @@ internal static class TradeMarkerDataLoader
         lock (Gate)
         {
             if (requestRefresh) schedule.Request();
-            return snapshot.TryGetTraderName(itemId, out traderName);
+            return cache.Snapshot.TryGetTraderName(itemId, out traderName);
         }
     }
 
@@ -60,13 +60,24 @@ internal static class TradeMarkerDataLoader
         lock (Gate)
         {
             schedule.Request();
-            return snapshot.IsRestricted(itemId);
+            return cache.Snapshot.IsRestricted(itemId);
         }
     }
 
     public static void RequestRefresh()
     {
         lock (Gate) schedule.Request();
+    }
+
+    public static void ApplyItemMarkers(Dictionary<string, string> additions)
+    {
+        lock (Gate)
+        {
+            if (stopped || additions.Count == 0) return;
+            cache.Apply(additions);
+            completed = true;
+            schedule.Request();
+        }
     }
 
     public static void QueueLanguage(string language)
@@ -85,9 +96,10 @@ internal static class TradeMarkerDataLoader
         {
             if (!schedule.TryStart(Clock.Elapsed.TotalSeconds)) return;
             var currentGeneration = generation;
+            var revision = cache.Revision;
             var language = pendingLanguage;
             pendingLanguage = null;
-            Task.Run(() => RefreshCore(currentGeneration, language));
+            Task.Run(() => RefreshCore(currentGeneration, revision, language));
         }
     }
 
@@ -101,7 +113,7 @@ internal static class TradeMarkerDataLoader
         }
     }
 
-    private static void RefreshCore(int currentGeneration, string? language)
+    private static void RefreshCore(int currentGeneration, long revision, string? language)
     {
         var success = false;
         try
@@ -136,12 +148,8 @@ internal static class TradeMarkerDataLoader
             lock (Gate)
             {
                 if (stopped || generation != currentGeneration) return;
-                if (!snapshot.SameAs(loaded))
-                {
-                    snapshot = loaded;
-                    completed = true;
-                }
-                success = true;
+                success = cache.TryReplace(revision, loaded, out var changed);
+                completed |= changed;
             }
         }
         catch (Exception exception)

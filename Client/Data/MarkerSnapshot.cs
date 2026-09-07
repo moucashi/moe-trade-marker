@@ -32,6 +32,24 @@ internal sealed class MarkerSnapshot
     public bool IsRestricted(string itemId) =>
         markers.TryGetValue(itemId, out var traderId) && restricted.Contains(traderId);
 
+    public MarkerSnapshot WithMarkers(Dictionary<string, string> additions)
+    {
+        var merged = new Dictionary<string, string>(markers, StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in additions) merged[pair.Key] = pair.Value;
+        return new MarkerSnapshot(names, merged, restricted);
+    }
+
+    public static bool TryReadItemMarker(string itemId, JToken? upd, out string traderId)
+    {
+        traderId = string.Empty;
+        if (!IsId(itemId) || upd is not JObject obj ||
+            obj["tradeMarker"] is not JObject marker ||
+            marker["traderId"] is not JValue { Type: JTokenType.String } value ||
+            !IsId((string?)value)) return false;
+        traderId = (string)value!;
+        return true;
+    }
+
     public bool SameAs(MarkerSnapshot other) =>
         Equal(names, other.names) && Equal(markers, other.markers) && restricted.SetEquals(other.restricted);
 
