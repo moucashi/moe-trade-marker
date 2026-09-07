@@ -1,13 +1,14 @@
 #if SPT_CLIENT
 using BepInEx;
 using BepInEx.Logging;
+using EFT.UI;
 using HarmonyLib;
 using MoeTradeMarker.Client.Patches;
 using MoeTradeMarker.Shared;
 
 namespace MoeTradeMarker.Client;
 
-[BepInPlugin(TradeMarkerConstants.ClientGuid, TradeMarkerConstants.ModName, "1.2.5")]
+[BepInPlugin(TradeMarkerConstants.ClientGuid, TradeMarkerConstants.ModName, "1.2.6")]
 [BepInDependency("com.blackhawk.quicksell", BepInDependency.DependencyFlags.SoftDependency)]
 [BepInDependency("com.swiftxp.spt.showmethemoney.quicksell", BepInDependency.DependencyFlags.SoftDependency)]
 public sealed class Plugin : BaseUnityPlugin
@@ -62,12 +63,15 @@ public sealed class Plugin : BaseUnityPlugin
         if (TradeMarkerDataLoader.ConsumeRefreshCompleted())
         {
             ItemViewTradeMarkerPatch.RefreshTrackedItemViews();
+            TradeMarkerTooltipContext.RefreshVisibleTooltips();
+            BaseContextInteractions.RequestGlobalRedraw();
         }
     }
 
     private void OnDestroy()
     {
         TradeMarkerDataLoader.Stop();
+        TradeMarkerTooltipContext.Clear();
         ItemViewTradeMarkerPatch.Clear();
         TradeMarkerOverlay.Clear();
         harmony?.UnpatchSelf();

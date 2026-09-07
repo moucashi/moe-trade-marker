@@ -1,248 +1,126 @@
 #if SPT_CLIENT
-using System;
-using System.Collections.Generic;
-using System.Reflection;
 using System.Runtime.CompilerServices;
+using EFT;
+using EFT.InventoryLogic;
+using EFT.UI;
+using EFT.UI.DragAndDrop;
+using EFT.UI.Insurance;
+using EFT.UI.Ragfair;
 using HarmonyLib;
+using MoeTradeMarker.Client.Data;
 using MoeTradeMarker.Shared;
+using UnityEngine;
 
 namespace MoeTradeMarker.Client.Patches;
 
-[HarmonyPatch]
+[HarmonyPatch(typeof(ItemTooltip), nameof(ItemTooltip.Show), new[]
+{
+    typeof(string), typeof(float), typeof(Offer), typeof(Item),
+    typeof(InventoryController), typeof(ItemUiContext), typeof(InsuranceCompany)
+})]
 internal static class ItemTooltipTradeMarkerPatch
 {
-    private static IEnumerable<MethodBase> TargetMethods()
+    private static void Prefix(Item __3, out bool __state)
     {
-        var itemTooltipType = AccessTools.TypeByName("EFT.UI.ItemTooltip");
-        if (itemTooltipType is null)
-        {
-            yield break;
-        }
-
-        var itemType = AccessTools.TypeByName("EFT.InventoryLogic.Item");
-        if (itemType is null)
-        {
-            yield break;
-        }
-
-        foreach (var method in itemTooltipType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
-        {
-            if (method.Name != "Show")
-            {
-                continue;
-            }
-
-            var parameters = method.GetParameters();
-            if (parameters.Length >= 4 && parameters[0].ParameterType == typeof(string) && parameters[3].ParameterType == itemType)
-            {
-                yield return method;
-            }
-        }
+        TradeMarkerTooltipContext.PushItem(__3);
+        __state = true;
     }
 
-    private static void Prefix(ref string __0, object __3)
+    private static void Finalizer(bool __state)
     {
-        if (!TradeMarkerTooltipContext.TryCreateMarkerTextForItem(__3, out var markerText))
-        {
-            TradeMarkerTooltipContext.PushMarkerText(null);
-            return;
-        }
-
-        TradeMarkerTooltipContext.PushMarkerText(markerText);
-        __0 = TradeMarkerTooltipContext.AppendMarkerText(__0, markerText);
-    }
-
-    private static void Finalizer()
-    {
-        TradeMarkerTooltipContext.PopMarkerText();
+        if (__state) TradeMarkerTooltipContext.PopItem();
     }
 }
 
-[HarmonyPatch]
+[HarmonyPatch(typeof(GridItemView), nameof(GridItemView.ShowTooltip))]
 internal static class GridItemViewTooltipTradeMarkerPatch
 {
-    private static IEnumerable<MethodBase> TargetMethods()
+    private static void Prefix(GridItemView __instance, out bool __state)
     {
-        var gridItemViewType = AccessTools.TypeByName("EFT.UI.DragAndDrop.GridItemView");
-        var showTooltipMethod = AccessTools.Method(gridItemViewType, "ShowTooltip", Type.EmptyTypes);
-        if (showTooltipMethod is not null)
-        {
-            yield return showTooltipMethod;
-        }
+        TradeMarkerTooltipContext.PushItem(__instance.Item);
+        __state = true;
     }
 
-    private static void Prefix(object __instance)
+    private static void Finalizer(bool __state)
     {
-        TradeMarkerTooltipContext.PushItemMarkerText(GetItem(__instance));
-    }
-
-    private static void Finalizer()
-    {
-        TradeMarkerTooltipContext.PopMarkerText();
-    }
-
-    private static object? GetItem(object itemView)
-    {
-        var type = itemView.GetType();
-        return AccessTools.Property(type, "Item")?.GetValue(itemView)
-            ?? AccessTools.Field(type, "item_0")?.GetValue(itemView);
+        if (__state) TradeMarkerTooltipContext.PopItem();
     }
 }
 
-[HarmonyPatch]
+[HarmonyPatch(typeof(SimpleTooltip), nameof(SimpleTooltip.Show), new[] { typeof(string), typeof(Vector2?), typeof(float), typeof(float?) })]
 internal static class SimpleTooltipShowTradeMarkerPatch
 {
-    private static IEnumerable<MethodBase> TargetMethods()
-    {
-        var simpleTooltipType = AccessTools.TypeByName("EFT.UI.SimpleTooltip");
-        if (simpleTooltipType is null)
-        {
-            yield break;
-        }
-
-        foreach (var method in simpleTooltipType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
-        {
-            var parameters = method.GetParameters();
-            if (method.Name == "Show" && parameters.Length >= 1 && parameters[0].ParameterType == typeof(string))
-            {
-                yield return method;
-            }
-        }
-    }
-
-    private static void Prefix(object __instance, ref string __0)
-    {
-        if (TradeMarkerTooltipContext.TryGetActiveMarkerText(out var markerText))
-        {
-            TradeMarkerTooltipContext.TrackTooltip(__instance, markerText);
-            __0 = TradeMarkerTooltipContext.AppendMarkerText(__0, markerText);
-            return;
-        }
-
-        TradeMarkerTooltipContext.ForgetTooltip(__instance);
-    }
+    private static void Prefix(SimpleTooltip __instance) => TradeMarkerTooltipContext.TrackTooltip(__instance);
 }
 
-[HarmonyPatch]
+[HarmonyPatch(typeof(SimpleTooltip), nameof(SimpleTooltip.SetText))]
 internal static class SimpleTooltipSetTextTradeMarkerPatch
 {
-    private static IEnumerable<MethodBase> TargetMethods()
-    {
-        var simpleTooltipType = AccessTools.TypeByName("EFT.UI.SimpleTooltip");
-        var setTextMethod = AccessTools.Method(simpleTooltipType, "SetText", [typeof(string)]);
-        if (setTextMethod is not null)
-        {
-            yield return setTextMethod;
-        }
-    }
-
-    private static void Prefix(object __instance, ref string __0)
-    {
-        if (TradeMarkerTooltipContext.TryGetTooltipMarkerText(__instance, out var markerText))
-        {
-            __0 = TradeMarkerTooltipContext.AppendMarkerText(__0, markerText);
-        }
-    }
+    private static void Prefix(SimpleTooltip __instance, ref string __0) =>
+        TradeMarkerTooltipContext.SetText(__instance, ref __0);
 }
 
 internal static class TradeMarkerTooltipContext
 {
-    private static readonly Stack<string?> ActiveMarkerTexts = new();
-    private static readonly ConditionalWeakTable<object, MarkerTextHolder> TooltipMarkerTexts = new();
+    private static readonly Stack<Item?> ActiveItems = new();
+    private static readonly ConditionalWeakTable<SimpleTooltip, TooltipText> TooltipTexts = new();
+    private static readonly List<WeakReference<SimpleTooltip>> TrackedTooltips = new();
 
-    public static void PushItemMarkerText(object? item)
+    public static void PushItem(Item? item) => ActiveItems.Push(item);
+
+    public static void PopItem()
     {
-        PushMarkerText(TryCreateMarkerTextForItem(item, out var markerText) ? markerText : null);
+        if (ActiveItems.Count > 0) ActiveItems.Pop();
     }
 
-    public static void PushMarkerText(string? markerText)
+    public static void TrackTooltip(SimpleTooltip tooltip)
     {
-        ActiveMarkerTexts.Push(markerText);
-    }
-
-    public static void PopMarkerText()
-    {
-        if (ActiveMarkerTexts.Count > 0)
-        {
-            ActiveMarkerTexts.Pop();
-        }
-    }
-
-    public static bool TryGetActiveMarkerText(out string markerText)
-    {
-        markerText = string.Empty;
-        if (ActiveMarkerTexts.Count == 0)
-        {
-            return false;
-        }
-
-        markerText = ActiveMarkerTexts.Peek() ?? string.Empty;
-        return !string.IsNullOrWhiteSpace(markerText);
-    }
-
-    public static void TrackTooltip(object tooltip, string markerText)
-    {
-        TooltipMarkerTexts.Remove(tooltip);
-        TooltipMarkerTexts.Add(tooltip, new MarkerTextHolder(markerText));
-    }
-
-    public static void ForgetTooltip(object tooltip)
-    {
-        TooltipMarkerTexts.Remove(tooltip);
-    }
-
-    public static bool TryGetTooltipMarkerText(object tooltip, out string markerText)
-    {
-        markerText = TooltipMarkerTexts.TryGetValue(tooltip, out var holder)
-            ? holder.MarkerText
-            : string.Empty;
-
-        return !string.IsNullOrWhiteSpace(markerText);
-    }
-
-    public static string AppendMarkerText(string? text, string markerText)
-    {
-        if (string.IsNullOrWhiteSpace(markerText) || text?.IndexOf(markerText, StringComparison.Ordinal) >= 0)
-        {
-            return text ?? string.Empty;
-        }
-
-        return string.IsNullOrWhiteSpace(text)
-            ? markerText
-            : $"{text}\n\n{markerText}";
-    }
-
-    public static bool TryCreateMarkerTextForItem(object? item, out string markerText)
-    {
-        markerText = string.Empty;
-        var itemId = GetItemId(item);
-        if (string.IsNullOrWhiteSpace(itemId) || !TradeMarkerDataLoader.TryGetTraderNameForItem(itemId, out var traderName))
-        {
-            return false;
-        }
-
-        markerText = TradeMarkerLocalization.Format(TradeMarkerText.TooltipTraderMarker, traderName);
-        return true;
-    }
-
-    private static string GetItemId(object? item)
-    {
+        var item = ActiveItems.Count > 0 ? ActiveItems.Peek() : null;
         if (item is null)
         {
-            return string.Empty;
+            if (TooltipTexts.TryGetValue(tooltip, out var old)) old.Reset(null);
+            return;
         }
-
-        var type = item.GetType();
-        var value = AccessTools.Property(type, "Id")?.GetValue(item)
-            ?? AccessTools.Field(type, "Id")?.GetValue(item)
-            ?? AccessTools.Field(type, "_id")?.GetValue(item);
-
-        return value?.ToString() ?? string.Empty;
+        if (!TooltipTexts.TryGetValue(tooltip, out var state))
+        {
+            state = new TooltipText();
+            TooltipTexts.Add(tooltip, state);
+            TrackedTooltips.Add(new WeakReference<SimpleTooltip>(tooltip));
+        }
+        // Track the item even before its marker is known, so a later cache fill can add the note.
+        state.Reset(item.Id.ToString());
+        TradeMarkerDataLoader.RequestRefresh();
     }
 
-    private sealed class MarkerTextHolder(string markerText)
+    public static void SetText(SimpleTooltip tooltip, ref string text)
     {
-        public string MarkerText { get; } = markerText;
+        if (!TooltipTexts.TryGetValue(tooltip, out var state) || state.ItemId is null) return;
+        var marker = TradeMarkerDataLoader.TryGetTraderNameForItem(state.ItemId, out var trader, requestRefresh: false)
+            ? TradeMarkerLocalization.Format(TradeMarkerText.TooltipTraderMarker, trader)
+            : string.Empty;
+        text = state.SetText(text, marker);
+    }
+
+    public static void RefreshVisibleTooltips()
+    {
+        TrackedTooltips.RemoveAll(reference => !reference.TryGetTarget(out var tooltip) || tooltip == null);
+        foreach (var reference in TrackedTooltips)
+        {
+            if (!reference.TryGetTarget(out var tooltip) || tooltip == null || !tooltip.Displayed ||
+                !TooltipTexts.TryGetValue(tooltip, out var state) || state.ItemId is null || tooltip._label == null) continue;
+            // Do not overwrite text another mod changed directly without going through SetText.
+            if (tooltip._label.text == state.RenderedText) tooltip.SetText(state.OriginalText);
+        }
+    }
+
+    public static void Clear()
+    {
+        foreach (var reference in TrackedTooltips)
+        {
+            if (reference.TryGetTarget(out var tooltip)) TooltipTexts.Remove(tooltip);
+        }
+        TrackedTooltips.Clear();
+        ActiveItems.Clear();
     }
 }
 #endif

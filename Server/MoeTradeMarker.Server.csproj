@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputType>Library</OutputType>
-    <Version>1.2.5</Version>
+    <Version>1.2.6</Version>
     <OutputPath>$(MoeTradeMarkerOutputRoot)SPT_Runtime/user/mods/Moe-TradeMarker/</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>

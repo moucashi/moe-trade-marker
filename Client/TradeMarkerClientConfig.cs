@@ -75,6 +75,7 @@ internal static class TradeMarkerClientConfig
             UpdateMetadata();
             rebuildPending = true;
             TradeMarkerDataLoader.QueueLanguage(TradeMarkerLocalization.LanguageCode);
+            TradeMarkerTooltipContext.RefreshVisibleTooltips();
         }
     }
 

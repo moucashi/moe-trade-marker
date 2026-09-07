@@ -60,7 +60,7 @@ internal static class TradeMarkerDataLoader
         lock (Gate)
         {
             schedule.Request();
-            return cache.Snapshot.IsRestricted(itemId);
+            return cache.Snapshot.GetRestriction(itemId) != RagfairRestriction.Allowed;
         }
     }
 
@@ -148,8 +148,8 @@ internal static class TradeMarkerDataLoader
             lock (Gate)
             {
                 if (stopped || generation != currentGeneration) return;
-                success = cache.TryReplace(revision, loaded, out var changed);
-                completed |= changed;
+                completed |= cache.Replace(revision, loaded);
+                success = true;
             }
         }
         catch (Exception exception)

@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.6
+
+- Keep flea selling unavailable until the initial restriction cache has loaded, without affecting trader quick selling.
+- Refresh open context menus when marker data changes, including QuickSell (Flea) availability.
+- Merge purchases received during a refresh without discarding updated trader names, restrictions or other items.
+- Refresh open item marker tooltips after cache or language changes, preserving their original content.
+
+- 首次限制缓存加载完成前暂时禁用跳蚤出售，不影响商人快售。
+- 标记数据变化时刷新已打开的右键菜单，包括 QuickSell (Flea) 的可用状态。
+- 合并刷新期间收到的购买标记，同时保留商人名称、限制和其他物品的更新。
+- 缓存或语言变化后更新已打开的物品角标提示，保留原有提示内容。
+
 ## 1.2.5
 
 - Apply server-provided purchase markers before new inventory items are displayed, without waiting for the background refresh or blocking the UI with network requests.

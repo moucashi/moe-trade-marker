@@ -7,18 +7,28 @@ using Newtonsoft.Json.Linq;
 
 namespace MoeTradeMarker.Client.Data;
 
+internal enum RagfairRestriction
+{
+    Unknown,
+    Allowed,
+    Restricted
+}
+
 internal sealed class MarkerSnapshot
 {
     public static readonly MarkerSnapshot Empty = Parse("{}", "{}", "[]");
+    public static readonly MarkerSnapshot Uninitialized = new(Empty.names, Empty.markers, Empty.restricted, false);
     private readonly Dictionary<string, string> names;
     private readonly Dictionary<string, string> markers;
     private readonly HashSet<string> restricted;
+    private readonly bool initialized;
 
-    private MarkerSnapshot(Dictionary<string, string> names, Dictionary<string, string> markers, HashSet<string> restricted)
+    private MarkerSnapshot(Dictionary<string, string> names, Dictionary<string, string> markers, HashSet<string> restricted, bool initialized = true)
     {
         this.names = names;
         this.markers = markers;
         this.restricted = restricted;
+        this.initialized = initialized;
     }
 
     public bool TryGetTraderName(string itemId, out string name)
@@ -32,11 +42,15 @@ internal sealed class MarkerSnapshot
     public bool IsRestricted(string itemId) =>
         markers.TryGetValue(itemId, out var traderId) && restricted.Contains(traderId);
 
+    public RagfairRestriction GetRestriction(string itemId) => !initialized
+        ? RagfairRestriction.Unknown
+        : IsRestricted(itemId) ? RagfairRestriction.Restricted : RagfairRestriction.Allowed;
+
     public MarkerSnapshot WithMarkers(Dictionary<string, string> additions)
     {
         var merged = new Dictionary<string, string>(markers, StringComparer.OrdinalIgnoreCase);
         foreach (var pair in additions) merged[pair.Key] = pair.Value;
-        return new MarkerSnapshot(names, merged, restricted);
+        return new MarkerSnapshot(names, merged, restricted, initialized);
     }
 
     public static bool TryReadItemMarker(string itemId, JToken? upd, out string traderId)
@@ -51,7 +65,7 @@ internal sealed class MarkerSnapshot
     }
 
     public bool SameAs(MarkerSnapshot other) =>
-        Equal(names, other.names) && Equal(markers, other.markers) && restricted.SetEquals(other.restricted);
+        initialized == other.initialized && Equal(names, other.names) && Equal(markers, other.markers) && restricted.SetEquals(other.restricted);
 
     private static bool Equal(Dictionary<string, string> left, Dictionary<string, string> right) =>
         left.Count == right.Count && left.All(pair => right.TryGetValue(pair.Key, out var value) && value == pair.Value);

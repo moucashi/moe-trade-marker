@@ -15,19 +15,17 @@ public class ClientDataRegressionTests
     private const string Restricted = "[\"bbbbbbbbbbbbbbbbbbbbbbbb\"]";
 
     [Fact]
-    public void PurchaseIsImmediatelyVisibleAndRejectsOlderRefresh()
+    public void PurchaseIsImmediatelyVisibleAndSurvivesOlderRefresh()
     {
         var cache = new MarkerCache();
-        cache.TryReplace(0, MarkerSnapshot.Parse(Names, "{}", Restricted), out _);
+        cache.Replace(0, MarkerSnapshot.Parse(Names, "{}", Restricted));
         var beforePurchase = cache.Revision;
         cache.Apply(new() { [ItemId] = TraderId });
         Assert.True(cache.Snapshot.TryGetTraderName(ItemId, out _));
         Assert.True(cache.Snapshot.IsRestricted(ItemId));
-        Assert.False(cache.TryReplace(beforePurchase, MarkerSnapshot.Empty, out var changed));
-        Assert.False(changed);
+        Assert.False(cache.Replace(beforePurchase, MarkerSnapshot.Parse(Names, "{}", Restricted)));
         Assert.True(cache.Snapshot.TryGetTraderName(ItemId, out _));
-        Assert.True(cache.TryReplace(cache.Revision, MarkerSnapshot.Empty, out changed));
-        Assert.True(changed);
+        Assert.True(cache.Replace(cache.Revision, MarkerSnapshot.Empty));
         Assert.False(cache.Snapshot.TryGetTraderName(ItemId, out _));
     }
 
@@ -57,9 +55,101 @@ public class ClientDataRegressionTests
         cache.Apply(new() { [second] = TraderId });
         cache.Apply(new());
         Assert.Equal(revision + 1, cache.Revision);
-        Assert.False(cache.TryReplace(revision, MarkerSnapshot.Empty, out _));
+        Assert.True(cache.Replace(revision, MarkerSnapshot.Parse(Names, Markers, Restricted)));
         Assert.True(cache.Snapshot.TryGetTraderName(ItemId, out _));
         Assert.True(cache.Snapshot.TryGetTraderName(second, out _));
+    }
+
+    [Fact]
+    public void InitialRestrictionIsUnknownUntilACompleteSnapshotArrives()
+    {
+        var cache = new MarkerCache();
+        Assert.Equal(RagfairRestriction.Unknown, cache.Snapshot.GetRestriction(ItemId));
+        Assert.False(cache.Snapshot.SameAs(MarkerSnapshot.Empty));
+        cache.Apply(new() { [ItemId] = TraderId });
+        Assert.Equal(RagfairRestriction.Unknown, cache.Snapshot.GetRestriction(ItemId));
+        Assert.True(cache.Replace(0, MarkerSnapshot.Parse(Names, "{}", Restricted)));
+        Assert.Equal(RagfairRestriction.Restricted, cache.Snapshot.GetRestriction(ItemId));
+        Assert.Equal(RagfairRestriction.Allowed, cache.Snapshot.GetRestriction("cccccccccccccccccccccccc"));
+    }
+
+    [Fact]
+    public void FirstValidEmptySnapshotStillNotifiesMenusThatLoadingFinished()
+    {
+        var cache = new MarkerCache();
+        Assert.True(cache.Replace(0, MarkerSnapshot.Empty));
+        Assert.Equal(RagfairRestriction.Allowed, cache.Snapshot.GetRestriction(ItemId));
+        Assert.False(cache.Replace(0, MarkerSnapshot.Empty));
+    }
+
+    [Fact]
+    public void ConcurrentPurchaseDoesNotDiscardNamesRestrictionsOrOtherItems()
+    {
+        const string otherItem = "cccccccccccccccccccccccc";
+        const string otherTrader = "dddddddddddddddddddddddd";
+        var cache = new MarkerCache();
+        cache.Replace(0, MarkerSnapshot.Parse(Names, "{}", "[]"));
+        var revision = cache.Revision;
+        cache.Apply(new() { [ItemId] = TraderId });
+        var loaded = MarkerSnapshot.Parse(
+            $"{{\"{TraderId}\":\"New name\",\"{otherTrader}\":\"Other trader\"}}",
+            $"{{\"{otherItem}\":\"{otherTrader}\"}}", Restricted);
+        Assert.True(cache.Replace(revision, loaded));
+        Assert.True(cache.Snapshot.TryGetTraderName(ItemId, out var name));
+        Assert.Equal("New name", name);
+        Assert.True(cache.Snapshot.IsRestricted(ItemId));
+        Assert.True(cache.Snapshot.TryGetTraderName(otherItem, out name));
+        Assert.Equal("Other trader", name);
+        Assert.False(cache.Snapshot.IsRestricted(otherItem));
+    }
+
+    [Fact]
+    public void OnlyPurchasesAfterFetchStartOverrideAuthoritativeUpdates()
+    {
+        const string otherItem = "cccccccccccccccccccccccc";
+        const string otherTrader = "dddddddddddddddddddddddd";
+        var cache = new MarkerCache();
+        cache.Apply(new() { [ItemId] = TraderId, [otherItem] = TraderId });
+        var revision = cache.Revision;
+        cache.Apply(new() { [ItemId] = otherTrader });
+        cache.Replace(revision, MarkerSnapshot.Parse("{}", Markers, Restricted));
+        Assert.True(cache.Snapshot.TryGetTraderName(ItemId, out var name));
+        Assert.Equal(otherTrader, name);
+        Assert.False(cache.Snapshot.IsRestricted(ItemId));
+        Assert.False(cache.Snapshot.TryGetTraderName(otherItem, out _));
+        cache.Replace(cache.Revision, MarkerSnapshot.Empty);
+        Assert.False(cache.Snapshot.TryGetTraderName(ItemId, out _));
+    }
+
+    [Fact]
+    public void RepeatedPurchasesCannotStarveRefreshOfOtherData()
+    {
+        var cache = new MarkerCache();
+        for (var i = 0; i < 20; i++)
+        {
+            var revision = cache.Revision;
+            cache.Apply(new() { [ItemId] = TraderId });
+            var name = $"Trader {i}";
+            cache.Replace(revision, MarkerSnapshot.Parse($"{{\"{TraderId}\":\"{name}\"}}", "{}", Restricted));
+            Assert.True(cache.Snapshot.TryGetTraderName(ItemId, out var actual));
+            Assert.Equal(name, actual);
+            Assert.True(cache.Snapshot.IsRestricted(ItemId));
+        }
+    }
+
+    [Fact]
+    public void InvalidRefreshPreservesPurchasesUntilRecovery()
+    {
+        var cache = new MarkerCache();
+        cache.Replace(0, MarkerSnapshot.Parse(Names, "{}", Restricted));
+        var revision = cache.Revision;
+        cache.Apply(new() { [ItemId] = TraderId });
+        Assert.ThrowsAny<JsonException>(() => cache.Replace(revision, MarkerSnapshot.Parse("<html>offline</html>", "{}", "[]")));
+        Assert.True(cache.Snapshot.IsRestricted(ItemId));
+        cache.Replace(revision, MarkerSnapshot.Parse(Names, "{}", Restricted));
+        Assert.True(cache.Snapshot.IsRestricted(ItemId));
+        cache.Replace(cache.Revision, MarkerSnapshot.Empty);
+        Assert.Equal(RagfairRestriction.Allowed, cache.Snapshot.GetRestriction(ItemId));
     }
 
     [Fact]
